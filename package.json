@@ -1,0 +1,59 @@
+{
+	"name": "n8n-nodes-parallel",
+	"version": "0.0.5",
+	"description": "n8n community node for Parallel AI - AI-powered research and data extraction",
+	"keywords": [
+		"n8n-community-node-package",
+		"parallel",
+		"ai",
+		"web-enrichment",
+		"web-search",
+		"data-extraction"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/parallel-web/paralllel-n8n-nodes",
+	"author": {
+		"name": "Jan Wilmake",
+		"email": "jan@wilmake.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/parallel-web/paralllel-n8n-nodes.git"
+	},
+	"engines": {
+		"node": ">=20.15"
+	},
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "npx rimraf dist && tsc && gulp build:icons",
+		"dev": "tsc --watch",
+		"format": "prettier --write",
+		"lint": "eslint package.json",
+		"lintfix": "eslint package.json --fix",
+		"prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js package.json",
+		"scan-package": "npx @n8n/scan-community-package n8n-nodes-parallel"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"credentials": [
+			"dist/ParallelApi.credentials.js"
+		],
+		"nodes": [
+			"dist/Parallel.node.js"
+		]
+	},
+	"devDependencies": {
+		"@typescript-eslint/parser": "~8.32.0",
+		"eslint": "^8.57.0",
+		"eslint-plugin-n8n-nodes-base": "^1.16.3",
+		"gulp": "^5.0.0",
+		"prettier": "^3.5.3",
+		"typescript": "^5.8.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
