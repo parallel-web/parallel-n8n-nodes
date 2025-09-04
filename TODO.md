@@ -20,12 +20,12 @@
 - ✅ Test locally
   - ✅ text
   - ✅ base
-  - ✅ core (theoretically can still timeout so removed for now)
+  - ❌ core (theoretically can still timeout so removed for now)
   - ❌ pro (sometimes works, sometimes times out)
   - ❌ can we still set up the node to retry on failure, so that the result blocknig call is retried as many times as needed for task completion? **No, this will create a new task**
   - ✅ Test `search` with both options
   - ✅ Test `json` with JSON schema for output
-  - ✅ Test `auto` deep research. **Doesn't work with core and below**
+  - ❌ Test `auto` deep research. **Doesn't work with core and below**
 - ✅ invite `parallel-developers` to maintain package
 - ✅ Put code into https://github.com/parallel-web/paralllel-n8n-nodes and link to that
 - ✅ Submit: https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes (support@parallel.ai + `Parallel Web Systems` as author)
