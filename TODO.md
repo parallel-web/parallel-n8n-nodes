@@ -27,14 +27,8 @@
   - ✅ Test `json` with JSON schema for output
   - ✅ Test `auto` deep research. **Doesn't work with core and below**
 - ✅ invite `parallel-developers` to maintain package
-- Put code into https://github.com/parallel-web/paralllel-n8n-nodes and link to that
-- Submit: https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes (support@parallel.ai + `Parallel Web Systems` as author)
-
-# Questions to Julian/Maurice
-
-Where is most usage: self-hosted
-
-Does subworkflow pattern with a trigger from a webhook make sense, is it used a lot in this way?
+- ✅ Put code into https://github.com/parallel-web/paralllel-n8n-nodes and link to that
+- ✅ Submit: https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes (support@parallel.ai + `Parallel Web Systems` as author)
 
 # After approval: early access testing
 
@@ -44,9 +38,7 @@ Does subworkflow pattern with a trigger from a webhook make sense, is it used a 
 >
 > People COULD already use it locally or on self-hosted before approval
 
-Test with people who wanted early access.
-
-Iterate on README and info on fields.
+Test with people who wanted early access. Take some time to collect feedback and determine the next steps.
 
 # How to popularize the integration
 
@@ -61,9 +53,15 @@ Think about outsourcing this to n8n dev agency or someone with big network in n8
 
 # Potential areas of improvement
 
-## Use setup with task creation + webhook
+## Use setup with task creation + retrieval (or webhook)
 
-This is difficult because you first need to enter the webhook URL for the trigger, ending up with lots of room for error. But it may be the only way for longer running tasks. May be a good thing to work on if people request it.
+If I understand correctly, the "**action**" that creates the task should be passed the webhook URL from the "**trigger**" in order to use them in the same workflow. This creates a pattern where the user needs to create the trigger first, get the URL, then create the run. From the n8n UX it's not immediately clear how this is done. But it may be the only way for longer running tasks! Should find a good example of this pattern first.
+
+Another option is splitting up the task creation and result node, and instructing the user to retry the result node with waiting time in between.
+
+Both of these options make it more complex for the end-user to execute a task and get results back, potentially reducing user experience and increasing error rate. Creating it this way does increasae capability but is against the goal of creating an easy way to start using parallel.
+
+An option would be to leave the current single-node pattern as it is, and create a separate category called "deep research" that clearly shows there's a `Start Deep Research` operation, and a `Retrieve Deep Research Result` operation. It somehow should be clearly documented these need to be used together with a retry on the retrieval operation.
 
 ## How to reduce TTFI (time to first integration)
 
