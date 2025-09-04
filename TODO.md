@@ -53,6 +53,15 @@ Think about outsourcing this to n8n dev agency or someone with big network in n8
 
 # Potential areas of improvement
 
+## Avoiding Timeout
+
+The max timeout for a workfow depends on where the server is hosted. The user can configure the timeout for a particular workflow, but the server also has a max timeout configured, which is defaulted to 5 minutes on n8n hosted. https://www.reddit.com/r/n8n/comments/1kye4fx/please_increase_timeout_limit_for_deep_research/
+
+If the timeout is just up to 5 minutes, only the "lite", "base", and "core" processors would work. The most important aspect is that we should inform the user about this as soon as possible. There are a few potential ways to do this:
+
+- ✅ Clarify timeout in description, which is available via an '(i)' tooltip
+- ❌ Respond with an error if a processor is chosen that may not have enough time given the timeout (for this, we need to know the workflow timeout, but it's unclear how this can be found)
+
 ## Use setup with task creation + retrieval (or webhook)
 
 If I understand correctly, the "**action**" that creates the task should be passed the webhook URL from the "**trigger**" in order to use them in the same workflow. This creates a pattern where the user needs to create the trigger first, get the URL, then create the run. From the n8n UX it's not immediately clear how this is done. But it may be the only way for longer running tasks! Should find a good example of this pattern first.
@@ -81,15 +90,6 @@ Add `/chat/completions` with text output.
 
 - Auto mode likely isn't preferable here since we are flattening the output and auto-mode creates deeply nested result
 - Idea: link to playground for creating output schema and recommended processor using ingest API
-
-## Avoiding Timeout
-
-The max timeout for a workfow depends on where the server is hosted. The user can configure the timeout for a particular workflow, but the server also has a max timeout configured, which is defaulted to 5 minutes on n8n hosted. https://www.reddit.com/r/n8n/comments/1kye4fx/please_increase_timeout_limit_for_deep_research/
-
-If the timeout is just up to 5 minutes, only the "lite", "base", and "core" processors would work. The most important aspect is that we should inform the user about this as soon as possible. There are a few potential ways to do this:
-
-- ✅ Clarify timeout in description, which is available via an '(i)' tooltip
-- ❌ Respond with an error if a processor is chosen that may not have enough time given the timeout (for this, we need to know the workflow timeout, but it's unclear how this can be found)
 
 ## Authentication
 
