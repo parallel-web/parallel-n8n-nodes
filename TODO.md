@@ -29,6 +29,7 @@
 - ✅ invite `parallel-developers` to maintain package
 - ✅ Put code into https://github.com/parallel-web/paralllel-n8n-nodes and link to that
 - ✅ Submit: https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes (support@parallel.ai + `Parallel Web Systems` as author)
+- Wait for approval (may take 6-12 weeks) https://wilmake.slack.com/archives/C09807JBB26/p1757066189095099
 
 # After approval: early access testing
 
