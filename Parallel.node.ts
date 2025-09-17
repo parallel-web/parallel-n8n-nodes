@@ -54,19 +54,60 @@ export class Parallel implements INodeType {
 			},
 			// WEB ENRICHMENT FIELDS
 			{
-				displayName: 'Input',
-				name: 'input',
-				// there is no such thing as textarea
-				type: 'string',
+				displayName: 'Input Type',
+				name: 'inputType',
+				type: 'options',
 				required: true,
 				displayOptions: {
 					show: {
 						operation: ['webEnrichment'],
 					},
 				},
+				options: [
+					{
+						name: 'Text',
+						value: 'text',
+						description: 'Natural language text input',
+					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description: 'Structured JSON data input',
+					},
+				],
+				default: 'text',
+			},
+			{
+				displayName: 'Input',
+				name: 'textInput',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['webEnrichment'],
+						inputType: ['text'],
+					},
+				},
 				default: '',
 				placeholder: 'What was the GDP of France in 2023? Format as "$X.X trillion (year)"',
-				description: 'Input to the task - can include both the question and desired output format',
+				description: 'Natural language query or instruction for the task',
+			},
+			{
+				displayName: 'JSON Input',
+				name: 'jsonInput',
+				type: 'json',
+				typeOptions: {
+					rows: 6,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['webEnrichment'],
+						inputType: ['json'],
+					},
+				},
+				default: '{\n  "company_name": "Apple Inc.",\n  "company_domain": "apple.com"\n}',
+				description: 'System will expect inputs of this JSON structure. Provide actual data values here.',
 			},
 			{
 				displayName: 'Output Schema Type',
@@ -88,7 +129,7 @@ export class Parallel implements INodeType {
 					{
 						name: 'Text',
 						value: 'text',
-						description: 'Simple text output (specify format in the input field)',
+						description: 'Simple text output (optionally specify format below)',
 					},
 					{
 						name: 'JSON',
@@ -96,7 +137,39 @@ export class Parallel implements INodeType {
 						description: 'Structured JSON output (requires JSON schema below)',
 					},
 				],
-				default: 'text',
+				default: 'json',
+			},
+			{
+				displayName: 'Output Format Description',
+				name: 'textOutputDescription',
+				type: 'string',
+				required: false,
+				displayOptions: {
+					show: {
+						operation: ['webEnrichment'],
+						outputSchemaType: ['text'],
+						inputType: ['text'],
+					},
+				},
+				default: '',
+				placeholder: 'Optional: Describe the desired output format (e.g., "Format as $X.X trillion (year)")',
+				description: 'Optional description of how you want the text output formatted',
+			},
+			{
+				displayName: 'Output Format Description',
+				name: 'textOutputDescriptionRequired',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['webEnrichment'],
+						outputSchemaType: ['text'],
+						inputType: ['json'],
+					},
+				},
+				default: '',
+				placeholder: 'Required: Describe what text output you want from the JSON input (e.g., "Generate a company summary")',
+				description: 'Required description of what text output you want when providing JSON input',
 			},
 			{
 				displayName: 'JSON Schema',
@@ -200,13 +273,6 @@ export class Parallel implements INodeType {
 						default: '',
 						placeholder: 'reddit.com,x.com',
 						description: 'Comma-separated list of domains to exclude from search results',
-					},
-					{
-						displayName: 'Input Schema',
-						name: 'inputSchema',
-						type: 'string',
-						default: '',
-						description: 'Optional description of expected input to the task',
 					},
 					{
 						displayName: 'Metadata',
@@ -381,7 +447,16 @@ async function executeTask(
 	executeFunctions: IExecuteFunctions,
 	itemIndex: number,
 ): Promise<IDataObject> {
-	const input = executeFunctions.getNodeParameter('input', itemIndex) as string;
+	const inputType = executeFunctions.getNodeParameter('inputType', itemIndex) as string;
+	
+	// Get input based on type
+	let input: string;
+	if (inputType === 'json') {
+		input = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+	} else {
+		input = executeFunctions.getNodeParameter('textInput', itemIndex) as string;
+	}
+	
 	const outputSchemaType = executeFunctions.getNodeParameter(
 		'outputSchemaType',
 		itemIndex,
@@ -422,9 +497,33 @@ async function executeTask(
 		}
 	}
 
-	// Add input schema if provided
-	if (additionalFields.inputSchema) {
-		taskSpec.input_schema = additionalFields.inputSchema as string;
+	// Add text output description if provided (when using text output schema)
+	if (outputSchemaType === 'text') {
+		let textDescription = '';
+		if (inputType === 'json') {
+			// Required description when input is JSON
+			textDescription = executeFunctions.getNodeParameter('textOutputDescriptionRequired', itemIndex) as string;
+		} else {
+			// Optional description when input is text
+			const optionalDescription = executeFunctions.getNodeParameter('textOutputDescription', itemIndex, '') as string;
+			if (optionalDescription) {
+				textDescription = optionalDescription;
+			}
+		}
+		
+		// If we have a text description, modify the task spec to include it
+		if (textDescription) {
+			if (taskSpec.output_schema && typeof taskSpec.output_schema === 'object' && (taskSpec.output_schema as IDataObject).type === 'text') {
+				// Add description to existing text schema
+				(taskSpec.output_schema as IDataObject).description = textDescription;
+			} else {
+				// Create text schema with description
+				taskSpec.output_schema = {
+					type: 'text',
+					description: textDescription,
+				};
+			}
+		}
 	}
 
 	// Prepare request body
