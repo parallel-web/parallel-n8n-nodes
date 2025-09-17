@@ -65,8 +65,8 @@ export class Parallel implements INodeType {
 					},
 				},
 				default: '',
-				placeholder: 'What was the GDP of France in 2023?',
-				description: 'Input to the task, either text or a JSON object',
+				placeholder: 'What was the GDP of France in 2023? Format as "$X.X trillion (year)"',
+				description: 'Input to the task - can include both the question and desired output format',
 			},
 			{
 				displayName: 'Output Schema Type',
@@ -88,30 +88,15 @@ export class Parallel implements INodeType {
 					{
 						name: 'Text',
 						value: 'text',
-						description: 'Text description of desired output',
+						description: 'Simple text output (specify format in the input field)',
 					},
 					{
 						name: 'JSON',
 						value: 'json',
-						description: 'Structured JSON schema',
+						description: 'Structured JSON output (requires JSON schema below)',
 					},
 				],
 				default: 'text',
-			},
-			{
-				displayName: 'Output Description',
-				name: 'outputDescription',
-				type: 'string',
-				required: true,
-				displayOptions: {
-					show: {
-						operation: ['webEnrichment'],
-						outputSchemaType: ['text'],
-					},
-				},
-				default: '',
-				placeholder: 'GDP in USD for the year, formatted like "$3.1 trillion (2023)"',
-				description: 'Text description of the desired output from the task',
 			},
 			{
 				displayName: 'JSON Schema',
@@ -129,7 +114,7 @@ export class Parallel implements INodeType {
 				},
 				default:
 					'{\n  "type": "object",\n  "properties": {\n    "result": {\n      "type": "string",\n      "description": "The main result"\n    }\n  },\n  "required": ["result"],\n  "additionalProperties": false\n}',
-				description: 'JSON schema defining the structure of the expected output',
+				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
 			},
 			{
 				displayName: 'Processor',
@@ -417,13 +402,8 @@ async function executeTask(
 			type: 'auto',
 		};
 	} else if (outputSchemaType === 'text') {
-		const outputDescription = executeFunctions.getNodeParameter(
-			'outputDescription',
-			itemIndex,
-		) as string;
 		taskSpec.output_schema = {
 			type: 'text',
-			description: outputDescription,
 		};
 	} else if (outputSchemaType === 'json') {
 		const jsonSchemaString = executeFunctions.getNodeParameter('jsonSchema', itemIndex) as string;
