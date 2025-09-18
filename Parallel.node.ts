@@ -38,10 +38,16 @@ export class Parallel implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Web Enrichment',
+						name: 'Sync Web Enrichment',
 						value: 'webEnrichment',
 						description: 'Execute a task with AI-powered web research and data extraction',
-						action: 'Web Enrichment',
+						action: 'Sync Web Enrichment',
+					},
+					{
+						name: 'Async Web Enrichment',
+						value: 'asyncWebEnrichment',
+						description: 'Start a task with AI-powered web research and data extraction (returns immediately with task ID)',
+						action: 'Async Web Enrichment',
 					},
 					{
 						name: 'Web Search',
@@ -60,7 +66,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						operation: ['webEnrichment'],
+						operation: ['webEnrichment', 'asyncWebEnrichment'],
 					},
 				},
 				options: [
@@ -84,7 +90,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						operation: ['webEnrichment'],
+						operation: ['webEnrichment', 'asyncWebEnrichment'],
 						inputType: ['text'],
 					},
 				},
@@ -102,7 +108,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						operation: ['webEnrichment'],
+						operation: ['webEnrichment', 'asyncWebEnrichment'],
 						inputType: ['json'],
 					},
 				},
@@ -120,12 +126,6 @@ export class Parallel implements INodeType {
 					},
 				},
 				options: [
-					// only for pro and above
-					// {
-					// 	name: 'Auto',
-					// 	value: 'auto',
-					// 	description: 'Automatically determine output schema',
-					// },
 					{
 						name: 'Text',
 						value: 'text',
@@ -138,6 +138,35 @@ export class Parallel implements INodeType {
 					},
 				],
 				default: 'json',
+			},
+			{
+				displayName: 'Output Schema Type',
+				name: 'asyncOutputSchemaType',
+				type: 'options',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['asyncWebEnrichment'],
+					},
+				},
+				options: [
+					{
+						name: 'Text',
+						value: 'text',
+						description: 'Markdown style deep research report with in-line citations',
+					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description: 'User-specified JSON output with field-level citations',
+					},
+					{
+						name: 'Auto',
+						value: 'auto',
+						description: 'Optimized JSON output with nested citations',
+					},
+				],
+				default: 'text',
 			},
 			{
 				displayName: 'Output Format Description',
@@ -190,6 +219,24 @@ export class Parallel implements INodeType {
 				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
 			},
 			{
+				displayName: 'JSON Schema',
+				name: 'asyncJsonSchema',
+				type: 'json',
+				typeOptions: {
+					rows: 10,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['asyncWebEnrichment'],
+						asyncOutputSchemaType: ['json'],
+					},
+				},
+				default:
+					'{\n  "type": "object",\n  "properties": {\n    "result": {\n      "type": "string",\n      "description": "The main result"\n    }\n  },\n  "required": ["result"],\n  "additionalProperties": false\n}',
+				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
+			},
+			{
 				displayName: 'Processor',
 				name: 'processor',
 				type: 'options',
@@ -211,12 +258,11 @@ export class Parallel implements INodeType {
 						value: 'base',
 						description: 'Reliable standard enrichments - $10/1000 runs',
 					},
-					// up to 5 minutes will still time out
-					// {
-					// 	name: 'Core',
-					// 	value: 'core',
-					// 	description: 'Cross-referenced, moderately complex outputs - $25/1000 runs',
-					// },
+					{
+						name: 'Core',
+						value: 'core',
+						description: 'Cross-referenced, moderately complex outputs - $25/1000 runs',
+					},
 					// These processors will time out in regular nodes. Should work on self-hosted ones though, but this is an edge case and we don't want to confuse people.
 					// {
 					// 	name: 'Pro',
@@ -247,13 +293,52 @@ export class Parallel implements INodeType {
 				default: 'base',
 			},
 			{
+				displayName: 'Processor',
+				name: 'asyncProcessor',
+				type: 'options',
+				description: 'Processor used for the async task. Higher-end processors for longer-running tasks.',
+				displayOptions: {
+					show: {
+						operation: ['asyncWebEnrichment'],
+					},
+				},
+				options: [
+					{
+						name: 'Pro',
+						value: 'pro',
+						description: 'Exploratory web research - $100/1000 runs',
+					},
+					{
+						name: 'Ultra',
+						value: 'ultra',
+						description: 'Advanced multi-source deep research - $300/1000 runs',
+					},
+					{
+						name: 'Ultra 2x',
+						value: 'ultra2x',
+						description: 'Difficult deep research - $600/1000 runs',
+					},
+					{
+						name: 'Ultra 4x',
+						value: 'ultra4x',
+						description: 'Very difficult deep research - $1200/1000 runs',
+					},
+					{
+						name: 'Ultra 8x',
+						value: 'ultra8x',
+						description: 'The most difficult deep research - $2400/1000 runs',
+					},
+				],
+				default: 'pro',
+			},
+			{
 				displayName: 'Additional Fields',
 				name: 'additionalFields',
 				type: 'collection',
 				placeholder: 'Add Field',
 				displayOptions: {
 					show: {
-						operation: ['webEnrichment'],
+						operation: ['webEnrichment', 'asyncWebEnrichment'],
 					},
 				},
 				default: {},
@@ -419,6 +504,9 @@ export class Parallel implements INodeType {
 				if (operation === 'webEnrichment') {
 					const result = await executeTask(this, i);
 
+					returnData.push(result);
+				} else if (operation === 'asyncWebEnrichment') {
+					const result = await executeAsyncTask(this, i);
 					returnData.push(result);
 				} else if (operation === 'webSearch') {
 					const result = await executeSearch(this, i);
@@ -593,6 +681,107 @@ async function executeTask(
 		`Task execution timed out after ${maxAttempts} attempts (approximately ${maxAttempts * 4} minutes)`,
 		{ itemIndex },
 	);
+}
+
+async function executeAsyncTask(
+	executeFunctions: IExecuteFunctions,
+	itemIndex: number,
+): Promise<IDataObject> {
+	const inputType = executeFunctions.getNodeParameter('inputType', itemIndex) as string;
+	
+	// Get input based on type
+	let input: string;
+	if (inputType === 'json') {
+		input = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+	} else {
+		input = executeFunctions.getNodeParameter('textInput', itemIndex) as string;
+	}
+	
+	const outputSchemaType = executeFunctions.getNodeParameter(
+		'asyncOutputSchemaType',
+		itemIndex,
+	) as string;
+	const processor = executeFunctions.getNodeParameter('asyncProcessor', itemIndex) as string;
+	const additionalFields = executeFunctions.getNodeParameter(
+		'additionalFields',
+		itemIndex,
+		{},
+	) as IDataObject;
+
+	// Prepare task specification
+	const taskSpec: IDataObject = {};
+
+	// Build output schema based on type
+	if (outputSchemaType === 'auto') {
+		taskSpec.output_schema = {
+			type: 'auto',
+		};
+	} else if (outputSchemaType === 'text') {
+		taskSpec.output_schema = {
+			type: 'text',
+		};
+	} else if (outputSchemaType === 'json') {
+		const jsonSchemaString = executeFunctions.getNodeParameter('asyncJsonSchema', itemIndex) as string;
+		try {
+			const jsonSchema = JSON.parse(jsonSchemaString);
+			taskSpec.output_schema = {
+				type: 'json',
+				json_schema: jsonSchema,
+			};
+		} catch (error) {
+			throw new NodeOperationError(
+				executeFunctions.getNode(),
+				`Invalid JSON in output schema: ${error.message}`,
+				{ itemIndex },
+			);
+		}
+	}
+
+	// For async tasks, no text output descriptions are needed
+	// Text outputs will use the default markdown format with citations
+
+	// Prepare request body
+	const body: IDataObject = {
+		input: tryParseJSON(input),
+		processor,
+		task_spec: taskSpec,
+	};
+
+	// Add metadata if provided
+	if (
+		additionalFields.metadata &&
+		Array.isArray((additionalFields.metadata as IDataObject).metadataFields)
+	) {
+		const metadata: IDataObject = {};
+		const metadataFields = (additionalFields.metadata as IDataObject)
+			.metadataFields as IDataObject[];
+		for (const field of metadataFields) {
+			if (field.key && field.value) {
+				metadata[field.key as string] = field.value;
+			}
+		}
+		if (Object.keys(metadata).length > 0) {
+			body.metadata = metadata;
+		}
+	}
+
+	// Add source policy if provided
+	const sourcePolicy = buildSourcePolicy(additionalFields);
+	if (sourcePolicy) {
+		body.source_policy = sourcePolicy;
+	}
+
+	// Create task run and return immediately
+	const taskRun = await parallelApiRequest(executeFunctions, 'POST', '/v1/tasks/runs', body);
+	
+	// Return task information immediately without waiting for completion
+	return {
+		run_id: taskRun.run_id,
+		status: 'started',
+		processor: processor,
+		created_at: taskRun.created_at || new Date().toISOString(),
+		message: 'Task started successfully. Use the run_id to check status or retrieve results later.',
+	};
 }
 
 async function executeSearch(
