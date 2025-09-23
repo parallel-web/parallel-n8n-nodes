@@ -304,6 +304,21 @@ export class Parallel implements INodeType {
 				},
 				options: [
 					{
+						name: 'Lite',
+						value: 'lite',
+						description: 'Basic metadata, fallback, low latency - $5/1000 runs',
+					},
+					{
+						name: 'Base',
+						value: 'base',
+						description: 'Reliable standard enrichments - $10/1000 runs',
+					},
+					{
+						name: 'Core',
+						value: 'core',
+						description: 'Cross-referenced, moderately complex outputs - $25/1000 runs',
+					},
+					{
 						name: 'Pro',
 						value: 'pro',
 						description: 'Exploratory web research - $100/1000 runs',
