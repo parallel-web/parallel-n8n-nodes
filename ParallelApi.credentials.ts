@@ -21,6 +21,18 @@ export class ParallelApi implements ICredentialType {
 			required: true,
 			description: 'Your Parallel API key. Get it from https://platform.parallel.ai/',
 		},
+		{
+			displayName: 'Webhook Secret',
+			name: 'webhookSecret',
+			type: 'string',
+			typeOptions: {
+				password: true,
+			},
+			default: '',
+			required: false,
+			description: 'Optional webhook secret for validating webhook signatures. Find this in Settings → Webhooks at https://platform.parallel.ai/settings',
+			hint: 'Webhook validation ensures secure communication. Get your secret from platform.parallel.ai/settings',
+		},
 	];
 
 	authenticate: IAuthenticateGeneric = {
