@@ -118,7 +118,7 @@ export class Parallel implements INodeType {
 						inputType: ['json'],
 					},
 				},
-				default: '{\n  "company_name": "Apple Inc.",\n  "company_domain": "apple.com"\n}',
+				default: '{\n  "company_name": "Apple Inc.",\n  "company_domain": "apple.com",\n  "company_ticker": "AAPL"\n}',
 				description: 'System will expect inputs of this JSON structure. Provide actual data values here.',
 			},
 			{
@@ -187,7 +187,7 @@ export class Parallel implements INodeType {
 					},
 				},
 				default: '',
-				placeholder: 'Optional: Describe the desired output format (e.g., "Format as $X.X trillion (year)")',
+				placeholder: 'Optional: Describe the desired output (e.g., "Format as $X.X trillion (year)")',
 				description: 'Optional description of how you want the text output formatted',
 			},
 			{
@@ -221,8 +221,8 @@ export class Parallel implements INodeType {
 					},
 				},
 				default:
-					'{\n  "type": "object",\n  "properties": {\n    "result": {\n      "type": "string",\n      "description": "The main result"\n    }\n  },\n  "required": ["result"],\n  "additionalProperties": false\n}',
-				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
+					'{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Official company name from recent filings or website."\n    },\n    "ceo_name": {\n      "type": "string",\n      "description": "Current CEO full name from company website or recent news."\n    },\n    "employee_count": {\n      "type": "string",\n      "description": "Current number of employees as approximate number or range (e.g., \'500-1000\', \'2500\')."\n    },\n    "annual_revenue_2024": {\n      "type": "string",\n      "description": "2024 annual revenue in millions USD format (e.g., \'$500M\', \'$2.5B\')."\n    },\n    "headquarters_city": {\n      "type": "string",\n      "description": "Primary headquarters city and country (e.g., \'San Francisco, USA\')."\n    },\n    "founded_year": {\n      "type": "string",\n      "description": "Year company was founded in YYYY format."\n    }\n  },\n  "required": ["company_name", "ceo_name", "employee_count", "annual_revenue_2024", "headquarters_city", "founded_year"],\n  "additionalProperties": false\n}',
+				description: 'JSON schema defining the structure of the expected output (description fields serve as field-level prompts)',
 			},
 			{
 				displayName: 'JSON Schema',
@@ -239,7 +239,7 @@ export class Parallel implements INodeType {
 					},
 				},
 				default:
-					'{\n  "type": "object",\n  "properties": {\n    "result": {\n      "type": "string",\n      "description": "The main result"\n    }\n  },\n  "required": ["result"],\n  "additionalProperties": false\n}',
+					'{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Official company name from recent filings or website."\n    },\n    "ceo_name": {\n      "type": "string",\n      "description": "Current CEO full name from company website or recent news."\n    },\n    "employee_count": {\n      "type": "string",\n      "description": "Current number of employees as approximate number or range (e.g., \'500-1000\', \'2500\')."\n    },\n    "annual_revenue_2024": {\n      "type": "string",\n      "description": "2024 annual revenue in millions USD format (e.g., \'$500M\', \'$2.5B\')."\n    },\n    "headquarters_city": {\n      "type": "string",\n      "description": "Primary headquarters city and country (e.g., \'San Francisco, USA\')."\n    },\n    "founded_year": {\n      "type": "string",\n      "description": "Year company was founded in YYYY format."\n    }\n  },\n  "required": ["company_name", "ceo_name", "employee_count", "annual_revenue_2024", "headquarters_city", "founded_year"],\n  "additionalProperties": false\n}',
 				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
 			},
 			{
@@ -257,17 +257,17 @@ export class Parallel implements INodeType {
 					{
 						name: 'Lite',
 						value: 'lite',
-						description: 'Basic metadata, fallback, low latency - $5/1000 runs',
+						description: 'Basic metadata, fallback, low latency - 5s-60s - max 2 output fields - $5/1000 runs',
 					},
 					{
 						name: 'Base',
 						value: 'base',
-						description: 'Reliable standard enrichments - $10/1000 runs',
+						description: 'Reliable standard enrichments - 15s-100s - max 5 output fields - $10/1000 runs',
 					},
 					{
 						name: 'Core',
 						value: 'core',
-						description: 'Cross-referenced, moderately complex outputs - $25/1000 runs',
+						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
 					},
 					// These processors will time out in regular nodes. Should work on self-hosted ones though, but this is an edge case and we don't want to confuse people.
 					// {
@@ -312,42 +312,42 @@ export class Parallel implements INodeType {
 					{
 						name: 'Lite',
 						value: 'lite',
-						description: 'Basic metadata, fallback, low latency - $5/1000 runs',
+						description: 'Basic metadata, fallback, low latency - 5s-60s - max 2 output fields - $5/1000 runs',
 					},
 					{
 						name: 'Base',
 						value: 'base',
-						description: 'Reliable standard enrichments - $10/1000 runs',
+						description: 'Reliable standard enrichments - 15s-100s - max 5 output fields - $10/1000 runs',
 					},
 					{
 						name: 'Core',
 						value: 'core',
-						description: 'Cross-referenced, moderately complex outputs - $25/1000 runs',
+						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
 					},
 					{
 						name: 'Pro',
 						value: 'pro',
-						description: 'Exploratory web research - $100/1000 runs',
+						description: 'Exploratory web research - 3min-9min - max 20 output fields - $100/1000 runs',
 					},
 					{
 						name: 'Ultra',
 						value: 'ultra',
-						description: 'Advanced multi-source deep research - $300/1000 runs',
+						description: 'Advanced multi-source deep research - 5min-25min - max 20 output fields - $300/1000 runs',
 					},
 					{
 						name: 'Ultra 2x',
 						value: 'ultra2x',
-						description: 'Difficult deep research - $600/1000 runs',
+						description: 'Difficult deep research - 5min-25min - max 25 output fields - $600/1000 runs',
 					},
 					{
 						name: 'Ultra 4x',
 						value: 'ultra4x',
-						description: 'Very difficult deep research - $1200/1000 runs',
+						description: 'Very difficult deep research - 8min-30min - max 25 output fields - $1200/1000 runs',
 					},
 					{
 						name: 'Ultra 8x',
 						value: 'ultra8x',
-						description: 'The most difficult deep research - $2400/1000 runs',
+						description: 'The most difficult deep research - 8min-30min - max 25 output fields - $2400/1000 runs',
 					},
 				],
 				default: 'pro',
@@ -596,20 +596,26 @@ export class Parallel implements INodeType {
 				default: JSON.stringify({
 					type: 'object',
 					properties: {
-						reasoning: {
-							type: 'string',
-							description: 'Think step by step to arrive at the answer',
-						},
 						answer: {
 							type: 'string',
-							description: 'The direct answer to the question',
+							description: 'Direct factual answer to the user question based on web research. If unavailable, return \'Information not found\'.',
 						},
-						citations: {
+						key_findings: {
 							type: 'array',
 							items: { type: 'string' },
-							description: 'Sources cited to support the answer',
+							description: 'List of 3-5 most important facts or insights related to the question. Return empty array if no findings.',
+						},
+						confidence_level: {
+							type: 'string',
+							description: 'Confidence level of the answer as \'High\', \'Medium\', or \'Low\' based on source quality and consistency.',
+						},
+						last_updated_date: {
+							type: 'string',
+							description: 'Most recent date of information found in YYYY-MM-DD format. If unavailable, return \'Unknown\'.',
 						},
 					},
+					required: ['answer', 'key_findings', 'confidence_level', 'last_updated_date'],
+					additionalProperties: false,
 				}, null, 2),
 				description: 'JSON schema defining the structure of the expected response',
 			},
