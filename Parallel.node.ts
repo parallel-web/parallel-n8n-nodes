@@ -51,7 +51,7 @@ export class Parallel implements INodeType {
 					{
 						name: 'Web Search',
 						value: 'webSearch',
-						description: 'Search the web with the Parallel Search API and retrieve a list of results and excerpts.',
+						description: 'Search the web with the Parallel Search API and retrieve a list of results with excerpts.',
 						action: 'Web Search',
 					},
 					{
@@ -207,7 +207,7 @@ export class Parallel implements INodeType {
 			},
 			{
 				displayName: 'JSON Schema',
-				name: 'jsonSchema',
+				name: 'syncOutputJsonSchema',
 				type: 'json',
 				typeOptions: {
 					rows: 10,
@@ -225,7 +225,7 @@ export class Parallel implements INodeType {
 			},
 			{
 				displayName: 'JSON Schema',
-				name: 'asyncJsonSchema',
+				name: 'asyncOutputJsonSchema',
 				type: 'json',
 				typeOptions: {
 					rows: 10,
@@ -268,32 +268,7 @@ export class Parallel implements INodeType {
 						value: 'core',
 						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
 					},
-					// These processors will time out in regular nodes. Should work on self-hosted ones though, but this is an edge case and we don't want to confuse people.
-					// {
-					// 	name: 'Pro',
-					// 	value: 'pro',
-					// 	description: 'Exploratory web research - $100/1000 runs',
-					// },
-					// {
-					// 	name: 'Ultra',
-					// 	value: 'ultra',
-					// 	description: 'Advanced multi-source deep research - $300/1000 runs',
-					// },
-					// {
-					// 	name: 'Ultra 2x',
-					// 	value: 'ultra2x',
-					// 	description: 'Difficult deep research - $600/1000 runs',
-					// },
-					// {
-					// 	name: 'Ultra 4x',
-					// 	value: 'ultra4x',
-					// 	description: 'Very difficult deep research - $1200/1000 runs',
-					// },
-					// {
-					// 	name: 'Ultra 8x',
-					// 	value: 'ultra8x',
-					// 	description: 'The most difficult deep research - $2400/1000 runs',
-					// },
+		
 				],
 				default: 'base',
 			},
@@ -739,7 +714,7 @@ async function executeTask(
 			type: 'text',
 		};
 	} else if (outputSchemaType === 'json') {
-		const jsonSchemaString = executeFunctions.getNodeParameter('jsonSchema', itemIndex) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter('syncOutputJsonSchema', itemIndex) as string;
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			taskSpec.output_schema = {
@@ -913,7 +888,7 @@ async function executeAsyncTask(
 			type: 'text',
 		};
 	} else if (outputSchemaType === 'json') {
-		const jsonSchemaString = executeFunctions.getNodeParameter('asyncJsonSchema', itemIndex) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter('asyncOutputJsonSchema', itemIndex) as string;
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			taskSpec.output_schema = {

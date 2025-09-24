@@ -12,14 +12,14 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 export class ParallelTrigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Parallel Task Completion Trigger',
+		displayName: 'Parallel Task Run Completion Trigger',
 		name: 'parallelTrigger',
 		icon: 'file:parallel.svg',
 		group: ['trigger'],
 		version: 1,
-		description: 'Triggers when a Parallel Task completes and fetches the full result',
+		description: 'Triggers when a Parallel Task Run completes and fetches the full result',
 		defaults: {
-			name: 'Parallel Task Completion',
+			name: 'Parallel Task Run Completion',
 		},
 		inputs: [],
 		outputs: [NodeConnectionType.Main],
@@ -57,7 +57,7 @@ export class ParallelTrigger implements INodeType {
 				name: 'onlyCompleted',
 				type: 'boolean',
 				default: true,
-				description: 'When disabled, the trigger will also fire for tasks with status "failed',
+				description: 'When enabled (default), only triggers on successful task completions. When disabled, also triggers on failed tasks for custom error handling.',
 			},
 			{
 				displayName: 'Include Webhook Data',
@@ -104,62 +104,71 @@ export class ParallelTrigger implements INodeType {
 		return false;
 	}
 
-	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-		const bodyData = this.getBodyData() as IDataObject;
-		const onlyCompleted = this.getNodeParameter('onlyCompleted') as boolean;
-		const includeWebhookData = this.getNodeParameter('includeWebhookData') as boolean;
+	/**
+	 * Validates webhook signature if enabled
+	 */
+	private async validateWebhook(this: IWebhookFunctions): Promise<void> {
 		const validateSignatures = this.getNodeParameter('validateSignatures') as boolean;
+		
+		if (!validateSignatures) {
+			return;
+		}
 
-		// Validate webhook signature if enabled
-		if (validateSignatures) {
-			try {
-				const credentials = await this.getCredentials('parallelApi');
-				const webhookSecret = credentials.webhookSecret as string;
+		try {
+			const credentials = await this.getCredentials('parallelApi');
+			const webhookSecret = credentials.webhookSecret as string;
 
-				if (!webhookSecret) {
-					throw new NodeApiError(this.getNode(), {}, {
-						message: 'Webhook signature validation is enabled but no webhook secret is configured. Please add your webhook secret to the Parallel API credentials.',
-						description: 'Get your webhook secret from https://platform.parallel.ai/settings',
-					});
-				}
-
-				const headers = this.getHeaderData();
-				const webhookId = headers['webhook-id'] as string;
-				const webhookTimestamp = headers['webhook-timestamp'] as string;
-				const webhookSignature = headers['webhook-signature'] as string;
-
-				if (!webhookId || !webhookTimestamp || !webhookSignature) {
-					throw new NodeApiError(this.getNode(), {}, {
-						message: 'Missing required webhook headers (webhook-id, webhook-timestamp, or webhook-signature)',
-						description: 'This webhook request does not appear to be from Parallel or is malformed.',
-					});
-				}
-
-				const body = JSON.stringify(this.getBodyData());
-				const isValidSignature = ParallelTrigger.verifyWebhookSignature(
-					webhookSecret,
-					webhookId,
-					webhookTimestamp,
-					body,
-					webhookSignature,
-				);
-
-				if (!isValidSignature) {
-					throw new NodeApiError(this.getNode(), {}, {
-						message: 'Invalid webhook signature',
-						description: 'The webhook signature could not be verified. This may indicate a security issue or incorrect webhook secret.',
-					});
-				}
-			} catch (error) {
-				// Re-throw NodeApiError as-is, wrap other errors
-				if (error instanceof NodeApiError) {
-					throw error;
-				}
-				throw new NodeApiError(this.getNode(), error as JsonObject, {
-					message: `Webhook signature validation failed: ${(error as Error).message}`,
+			if (!webhookSecret) {
+				throw new NodeApiError(this.getNode(), {}, {
+					message: 'Webhook signature validation is enabled but no webhook secret is configured. Please add your webhook secret to the Parallel API credentials.',
+					description: 'Get your webhook secret from https://platform.parallel.ai/settings',
 				});
 			}
+
+			const headers = this.getHeaderData();
+			const webhookId = headers['webhook-id'] as string;
+			const webhookTimestamp = headers['webhook-timestamp'] as string;
+			const webhookSignature = headers['webhook-signature'] as string;
+
+			if (!webhookId || !webhookTimestamp || !webhookSignature) {
+				throw new NodeApiError(this.getNode(), {}, {
+					message: 'Missing required webhook headers (webhook-id, webhook-timestamp, or webhook-signature)',
+					description: 'This webhook request does not appear to be from Parallel or is malformed.',
+				});
+			}
+
+			const body = JSON.stringify(this.getBodyData());
+			const isValidSignature = ParallelTrigger.verifyWebhookSignature(
+				webhookSecret,
+				webhookId,
+				webhookTimestamp,
+				body,
+				webhookSignature,
+			);
+
+			if (!isValidSignature) {
+				throw new NodeApiError(this.getNode(), {}, {
+					message: 'Invalid webhook signature',
+					description: 'The webhook signature could not be verified. This may indicate a security issue or incorrect webhook secret.',
+				});
+			}
+		} catch (error) {
+			// Re-throw NodeApiError as-is, wrap other errors
+			if (error instanceof NodeApiError) {
+				throw error;
+			}
+			throw new NodeApiError(this.getNode(), error as JsonObject, {
+				message: `Webhook signature validation failed: ${(error as Error).message}`,
+			});
 		}
+	}
+
+	/**
+	 * Processes the webhook payload and fetches task results
+	 */
+	private async processWebhookPayload(this: IWebhookFunctions, bodyData: IDataObject): Promise<IWebhookResponseData> {
+		const onlyCompleted = this.getNodeParameter('onlyCompleted') as boolean;
+		const includeWebhookData = this.getNodeParameter('includeWebhookData') as boolean;
 
 		// Validate webhook payload from Parallel
 		if (!bodyData || !bodyData.type || bodyData.type !== 'task_run.status') {
@@ -224,5 +233,15 @@ export class ParallelTrigger implements INodeType {
 				message: `Failed to fetch result for task run ${runId}: ${apiError.message || 'Unknown error'}`,
 			});
 		}
+	}
+
+	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
+		const bodyData = this.getBodyData() as IDataObject;
+
+		// Validate webhook signature if enabled
+		await ParallelTrigger.prototype.validateWebhook.call(this);
+
+		// Process the webhook payload
+		return await ParallelTrigger.prototype.processWebhookPayload.call(this, bodyData);
 	}
 }
