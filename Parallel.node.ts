@@ -163,7 +163,7 @@ export class Parallel implements INodeType {
 					{
 						name: 'Auto',
 						value: 'auto',
-						description: 'Optimized JSON output with nested citations',
+						description: 'Only supported in Pro and above. Optimized JSON output with nested citations',
 					},
 				],
 				default: 'text',

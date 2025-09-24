@@ -42,7 +42,8 @@
 			"dist/ParallelApi.credentials.js"
 		],
 		"nodes": [
-			"dist/Parallel.node.js"
+			"dist/Parallel.node.js",
+			"dist/ParallelTrigger.node.js"
 		]
 	},
 	"devDependencies": {

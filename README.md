@@ -32,6 +32,15 @@ Intelligent web search with AI-powered processing:
 - Domain filtering for trusted sources
 - Structured results with excerpts and citations
 
+### 🔔 **Task Completion Trigger** - [Webhook API](https://docs.parallel.ai/task-api/features/webhooks)
+
+Automatically trigger workflows when Parallel tasks complete:
+
+- **Real-time notifications**: Receive immediate updates when tasks finish
+- **Automatic result fetching**: Automatically retrieves full task results
+- **Flexible filtering**: Choose to trigger only on successful completions
+- **Webhook integration**: Simple webhook setup with n8n's built-in webhook system
+
 ## Key Features
 
 ### **Flexible Output Schemas**
@@ -66,6 +75,7 @@ Automatically handles long-running research tasks with intelligent retry logic -
 - **Market Research**: Track competitors, analyze trends, and monitor industry changes
 - **Due Diligence**: Gather comprehensive information about companies and individuals
 - **Data Validation**: Cross-reference and verify information from multiple sources
+- **Automated Workflows**: Trigger downstream actions when long-running research tasks complete
 
 ## Resources
 
