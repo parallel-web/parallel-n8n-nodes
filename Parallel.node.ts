@@ -6,9 +6,8 @@ import type {
 	INodeTypeDescription,
 	IHttpRequestMethods,
 	IRequestOptions,
-	JsonObject,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionType, NodeOperationError, NodeApiError } from 'n8n-workflow';
 
 export class Parallel implements INodeType {
 	description: INodeTypeDescription = {
@@ -668,7 +667,7 @@ export class Parallel implements INodeType {
 					const result = await executeChat(this, i);
 					returnData.push(result);
 				}
-			} catch (error) {
+			} catch (error: any) {
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {},
@@ -676,9 +675,15 @@ export class Parallel implements INodeType {
 						pairedItem: { item: i },
 					});
 				} else {
-					throw new NodeOperationError(this.getNode(), error as Error, {
-						itemIndex: i,
-					});
+					// If it's already a proper n8n error (NodeApiError), just re-throw it
+					// Otherwise, wrap it in NodeOperationError
+					if (error.name === 'NodeApiError' || error.name === 'NodeOperationError') {
+						throw error;
+					} else {
+						throw new NodeOperationError(this.getNode(), error as Error, {
+							itemIndex: i,
+						});
+					}
 				}
 			}
 		}
@@ -694,9 +699,18 @@ async function executeTask(
 	const inputType = executeFunctions.getNodeParameter('inputType', itemIndex) as string;
 	
 	// Get input based on type
-	let input: string;
+	let input: string | object;
 	if (inputType === 'json') {
-		input = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+		const jsonInputString = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+		try {
+			input = JSON.parse(jsonInputString);
+		} catch (error) {
+			throw new NodeOperationError(
+				executeFunctions.getNode(),
+				`Invalid JSON in input: ${error.message}`,
+				{ itemIndex },
+			);
+		}
 	} else {
 		input = executeFunctions.getNodeParameter('textInput', itemIndex) as string;
 	}
@@ -772,7 +786,7 @@ async function executeTask(
 
 	// Prepare request body
 	const body: IDataObject = {
-		input: tryParseJSON(input),
+		input: input, // input is already parsed if it was JSON
 		processor,
 		task_spec: taskSpec,
 	};
@@ -805,32 +819,44 @@ async function executeTask(
 	const taskRun = await parallelApiRequest(executeFunctions, 'POST', '/v1/tasks/runs', body);
 	const runId = taskRun.run_id;
 
-	// Poll for result with increasing timeout and retry logic
-	const maxAttempts = 15;
-	let attempt = 0;
+		// Poll for result with exponential backoff retry logic
+		const maxAttempts = 15;
+		let attempt = 0;
 
-	while (attempt < maxAttempts) {
-		try {
-			const timeout = 240;
-			const result = await parallelApiRequest(
-				executeFunctions,
-				'GET',
-				`/v1/tasks/runs/${runId}/result?timeout=${timeout}`,
-			);
+		while (attempt < maxAttempts) {
+			try {
+				const timeout = 240;
+				const result = await parallelApiRequest(
+					executeFunctions,
+					'GET',
+					`/v1/tasks/runs/${runId}/result?timeout=${timeout}`,
+				);
 
-			return result;
-		} catch (error) {
-			attempt++;
+				return result;
+			} catch (error: any) {
+				attempt++;
+				const statusCode = error.httpCode || error.status || error.statusCode;
 
-			// If it's a timeout error and we haven't exceeded max attempts, continue
-			if (error.httpCode === '408' && attempt < maxAttempts) {
-				continue;
+				// Handle retryable errors with exponential backoff
+				const isRetryableError = [408, 429, 500, 502, 503].includes(parseInt(statusCode));
+				
+				if (isRetryableError && attempt < maxAttempts) {
+					// Calculate exponential backoff delay (base 2 seconds, max 60 seconds)
+					const delay = Math.min(2000 * Math.pow(2, attempt - 1), 60000);
+					
+					// Add jitter to prevent thundering herd
+					const jitter = Math.random() * 1000;
+					const totalDelay = delay + jitter;
+					
+					// Wait before retrying
+					await new Promise(resolve => setTimeout(resolve, totalDelay));
+					continue;
+				}
+
+				// For non-retryable errors or if we've exceeded max attempts, throw
+				throw error;
 			}
-
-			// For other errors or if we've exceeded max attempts, throw
-			throw error;
 		}
-	}
 
 	throw new NodeOperationError(
 		executeFunctions.getNode(),
@@ -846,9 +872,18 @@ async function executeAsyncTask(
 	const inputType = executeFunctions.getNodeParameter('inputType', itemIndex) as string;
 	
 	// Get input based on type
-	let input: string;
+	let input: string | object;
 	if (inputType === 'json') {
-		input = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+		const jsonInputString = executeFunctions.getNodeParameter('jsonInput', itemIndex) as string;
+		try {
+			input = JSON.parse(jsonInputString);
+		} catch (error) {
+			throw new NodeOperationError(
+				executeFunctions.getNode(),
+				`Invalid JSON in input: ${error.message}`,
+				{ itemIndex },
+			);
+		}
 	} else {
 		input = executeFunctions.getNodeParameter('textInput', itemIndex) as string;
 	}
@@ -899,7 +934,7 @@ async function executeAsyncTask(
 
 	// Prepare request body
 	const body: IDataObject = {
-		input: tryParseJSON(input),
+		input: input, // input is already parsed if it was JSON
 		processor,
 		task_spec: taskSpec,
 	};
@@ -1086,8 +1121,119 @@ async function parallelChatApiRequest(
 		);
 
 		return result;
-	} catch (error) {
-		throw new NodeOperationError(executeFunctions.getNode(), error as JsonObject);
+	} catch (error: any) {
+		// Extract error details from API response
+		const statusCode = parseInt(error.httpCode || error.status || error.statusCode || '0');
+		const errorResponse = error.response?.body || error.body || error;
+		
+		// Get the actual error message from the API
+		let errorMessage = 'Request failed';
+		let errorDetail = '';
+		
+		// Try to extract from n8n's wrapped error first
+		if (error.description) {
+			errorMessage = error.description;
+		}
+		
+		// Try to extract from messages array (raw API response)
+		if (error.messages && error.messages.length > 0) {
+			try {
+				const rawMessage = error.messages[0];
+				// Look for pattern like "400 - {json response}"
+				const jsonMatch = rawMessage.match(/\d+ - (.+)/);
+				if (jsonMatch) {
+					const apiResponse = JSON.parse(jsonMatch[1]);
+					if (apiResponse.error?.message) {
+						errorMessage = apiResponse.error.message;
+					}
+					if (apiResponse.error?.detail) {
+						errorDetail = typeof apiResponse.error.detail === 'string' 
+							? apiResponse.error.detail 
+							: JSON.stringify(apiResponse.error.detail);
+					}
+				}
+			} catch (e) {
+				// If parsing fails, continue with other extraction methods
+			}
+		}
+		
+		// Fallback: try to extract from nested error response
+		if (errorMessage === 'Request failed' && errorResponse?.error) {
+			errorMessage = errorResponse.error.message || errorMessage;
+			if (errorResponse.error.detail) {
+				errorDetail = typeof errorResponse.error.detail === 'string' 
+					? errorResponse.error.detail 
+					: JSON.stringify(errorResponse.error.detail);
+			}
+		}
+		
+		// Final fallback: use error.message if we still don't have anything
+		if (errorMessage === 'Request failed' && error.message) {
+			errorMessage = error.message;
+		}
+
+
+		// Handle different status codes appropriately
+		switch (statusCode) {
+			case 400:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: errorMessage,
+					description: errorDetail || 'Bad request - check your parameters and configuration.',
+				});
+			case 401:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Authentication failed',
+					description: errorMessage || 'Invalid or missing API credentials. Please verify your API key.',
+				});
+			case 402:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Payment required',
+					description: errorMessage || 'Insufficient credits in your account. Please add credits to continue.',
+				});
+			case 403:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Access forbidden',
+					description: errorMessage || 'Invalid processor in request or insufficient permissions.',
+				});
+			case 404:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Resource not found',
+					description: errorMessage || 'Run ID or resource not found. Please verify the resource exists.',
+				});
+			case 408:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Request timeout',
+					description: errorMessage || 'The request timed out. This is normal for long-running tasks.',
+					httpCode: '408',
+				});
+			case 422:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Invalid request data',
+					description: `${errorMessage}${errorDetail ? '\n\nDetails: ' + errorDetail : ''}`,
+				});
+			case 429:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Rate limit exceeded',
+					description: errorMessage || 'Too many requests. Configure retry logic in your workflow to handle rate limits.',
+					httpCode: '429',
+				});
+			case 500:
+			case 502:
+			case 503:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Server error',
+					description: errorMessage || 'Server-side error occurred. Use workflow retry settings to handle temporary failures.',
+					httpCode: statusCode.toString(),
+				});
+			default:
+				// If we can't extract proper error info, at least show what we have
+				const fallbackMessage = errorMessage !== 'Request failed' ? errorMessage : 'An error occurred';
+				const fallbackDescription = errorDetail || `Status code: ${statusCode || 'unknown'}`;
+				throw new NodeOperationError(executeFunctions.getNode(), error, {
+					message: fallbackMessage,
+					description: fallbackDescription,
+				});
+		}
 	}
 }
 
@@ -1117,13 +1263,6 @@ function buildSourcePolicy(additionalFields: IDataObject): IDataObject | null {
 	return Object.keys(sourcePolicy).length > 0 ? sourcePolicy : null;
 }
 
-function tryParseJSON(input: string): string | object {
-	try {
-		return JSON.parse(input);
-	} catch {
-		return input;
-	}
-}
 
 async function parallelApiRequest(
 	executeFunctions: IExecuteFunctions,
@@ -1150,8 +1289,120 @@ async function parallelApiRequest(
 			'parallelApi',
 			options,
 		);
-	} catch (error) {
-		throw new NodeOperationError(executeFunctions.getNode(), error as JsonObject);
+	} catch (error: any) {
+		// Extract error details from API response
+		const statusCode = parseInt(error.httpCode || error.status || error.statusCode || '0');
+		const errorResponse = error.response?.body || error.body || error;
+		
+		// Get the actual error message from the API
+		let errorMessage = 'Request failed';
+		let errorDetail = '';
+		
+		// Try to extract from n8n's wrapped error first
+		if (error.description) {
+			errorMessage = error.description;
+		}
+		
+		// Try to extract from messages array (raw API response)
+		if (error.messages && error.messages.length > 0) {
+			try {
+				const rawMessage = error.messages[0];
+				// Look for pattern like "400 - {json response}"
+				const jsonMatch = rawMessage.match(/\d+ - (.+)/);
+				if (jsonMatch) {
+					const apiResponse = JSON.parse(jsonMatch[1]);
+					if (apiResponse.error?.message) {
+						errorMessage = apiResponse.error.message;
+					}
+					if (apiResponse.error?.detail) {
+						errorDetail = typeof apiResponse.error.detail === 'string' 
+							? apiResponse.error.detail 
+							: JSON.stringify(apiResponse.error.detail);
+					}
+				}
+			} catch (e) {
+				// If parsing fails, continue with other extraction methods
+			}
+		}
+		
+		// Fallback: try to extract from nested error response
+		if (errorMessage === 'Request failed' && errorResponse?.error) {
+			errorMessage = errorResponse.error.message || errorMessage;
+			if (errorResponse.error.detail) {
+				errorDetail = typeof errorResponse.error.detail === 'string' 
+					? errorResponse.error.detail 
+					: JSON.stringify(errorResponse.error.detail);
+			}
+		}
+		
+		// Final fallback: use error.message if we still don't have anything
+		if (errorMessage === 'Request failed' && error.message) {
+			errorMessage = error.message;
+		}
+
+
+		// Handle different status codes appropriately
+		switch (statusCode) {
+			case 400:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: errorMessage,
+					description: errorDetail || 'Bad request - check your parameters and configuration.',
+				});
+			case 401:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Authentication failed',
+					description: errorMessage || 'Invalid or missing API credentials. Please verify your API key.',
+				});
+			case 402:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Payment required',
+					description: errorMessage || 'Insufficient credits in your account. Please add credits to continue.',
+				});
+			case 403:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Access forbidden',
+					description: errorMessage || 'Invalid processor in request or insufficient permissions.',
+				});
+			case 404:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Resource not found',
+					description: errorMessage || 'Run ID or resource not found. Please verify the resource exists.',
+				});
+			case 408:
+				// Timeout - this should be handled by retry logic in calling function
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Request timeout',
+					description: errorMessage || 'The request timed out. This is normal for long-running tasks.',
+					httpCode: '408',
+				});
+			case 422:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Invalid request data',
+					description: `${errorMessage}${errorDetail ? '\n\nDetails: ' + errorDetail : ''}`,
+				});
+			case 429:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Rate limit exceeded',
+					description: errorMessage || 'Too many requests. Configure retry logic in your workflow to handle rate limits.',
+					httpCode: '429',
+				});
+			case 500:
+			case 502:
+			case 503:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Server error',
+					description: errorMessage || 'Server-side error occurred. Use workflow retry settings to handle temporary failures.',
+					httpCode: statusCode.toString(),
+				});
+			default:
+				// If we can't extract proper error info, at least show what we have
+				const fallbackMessage = errorMessage !== 'Request failed' ? errorMessage : 'An error occurred';
+				const fallbackDescription = errorDetail || `Status code: ${statusCode || 'unknown'}`;
+				throw new NodeOperationError(executeFunctions.getNode(), error, {
+					message: fallbackMessage,
+					description: fallbackDescription,
+				});
+		}
 	}
 }
 
@@ -1181,7 +1432,118 @@ async function parallelApiRequestWithWebhook(
 			'parallelApi',
 			options,
 		);
-	} catch (error) {
-		throw new NodeOperationError(executeFunctions.getNode(), error as JsonObject);
+	} catch (error: any) {
+		// Extract error details from API response
+		const statusCode = parseInt(error.httpCode || error.status || error.statusCode || '0');
+		const errorResponse = error.response?.body || error.body || error;
+		
+		// Get the actual error message from the API
+		let errorMessage = 'Request failed';
+		let errorDetail = '';
+		
+		// Try to extract from n8n's wrapped error first
+		if (error.description) {
+			errorMessage = error.description;
+		}
+		
+		// Try to extract from messages array (raw API response)
+		if (error.messages && error.messages.length > 0) {
+			try {
+				const rawMessage = error.messages[0];
+				// Look for pattern like "400 - {json response}"
+				const jsonMatch = rawMessage.match(/\d+ - (.+)/);
+				if (jsonMatch) {
+					const apiResponse = JSON.parse(jsonMatch[1]);
+					if (apiResponse.error?.message) {
+						errorMessage = apiResponse.error.message;
+					}
+					if (apiResponse.error?.detail) {
+						errorDetail = typeof apiResponse.error.detail === 'string' 
+							? apiResponse.error.detail 
+							: JSON.stringify(apiResponse.error.detail);
+					}
+				}
+			} catch (e) {
+				// If parsing fails, continue with other extraction methods
+			}
+		}
+		
+		// Fallback: try to extract from nested error response
+		if (errorMessage === 'Request failed' && errorResponse?.error) {
+			errorMessage = errorResponse.error.message || errorMessage;
+			if (errorResponse.error.detail) {
+				errorDetail = typeof errorResponse.error.detail === 'string' 
+					? errorResponse.error.detail 
+					: JSON.stringify(errorResponse.error.detail);
+			}
+		}
+		
+		// Final fallback: use error.message if we still don't have anything
+		if (errorMessage === 'Request failed' && error.message) {
+			errorMessage = error.message;
+		}
+
+
+		// Handle different status codes appropriately
+		switch (statusCode) {
+			case 400:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: errorMessage,
+					description: errorDetail || 'Bad request - check your parameters and configuration.',
+				});
+			case 401:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Authentication failed',
+					description: errorMessage || 'Invalid or missing API credentials. Please verify your API key.',
+				});
+			case 402:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Payment required',
+					description: errorMessage || 'Insufficient credits in your account. Please add credits to continue.',
+				});
+			case 403:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Access forbidden',
+					description: errorMessage || 'Invalid processor in request or insufficient permissions.',
+				});
+			case 404:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Resource not found',
+					description: errorMessage || 'Run ID or resource not found. Please verify the resource exists.',
+				});
+			case 408:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Request timeout',
+					description: errorMessage || 'The request timed out. This is normal for long-running tasks.',
+					httpCode: '408',
+				});
+			case 422:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Invalid request data',
+					description: `${errorMessage}${errorDetail ? '\n\nDetails: ' + errorDetail : ''}`,
+				});
+			case 429:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Rate limit exceeded',
+					description: errorMessage || 'Too many requests. Configure retry logic in your workflow to handle rate limits.',
+					httpCode: '429',
+				});
+			case 500:
+			case 502:
+			case 503:
+				throw new NodeApiError(executeFunctions.getNode(), error, {
+					message: 'Server error',
+					description: errorMessage || 'Server-side error occurred. Use workflow retry settings to handle temporary failures.',
+					httpCode: statusCode.toString(),
+				});
+			default:
+				// If we can't extract proper error info, at least show what we have
+				const fallbackMessage = errorMessage !== 'Request failed' ? errorMessage : 'An error occurred';
+				const fallbackDescription = errorDetail || `Status code: ${statusCode || 'unknown'}`;
+				throw new NodeOperationError(executeFunctions.getNode(), error, {
+					message: fallbackMessage,
+					description: fallbackDescription,
+				});
+		}
 	}
 }
