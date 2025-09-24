@@ -55,6 +55,12 @@ export class Parallel implements INodeType {
 						description: 'Search the web with AI-powered processing',
 						action: 'Web Search',
 					},
+					{
+						name: 'Web Chat',
+						value: 'webChat',
+						description: 'AI-powered chat with real-time web access',
+						action: 'Web Chat',
+					},
 				],
 				default: 'webEnrichment',
 			},
@@ -506,6 +512,118 @@ export class Parallel implements INodeType {
 					},
 				],
 			},
+			// WEB CHAT FIELDS
+			{
+				displayName: 'Input Prompt',
+				name: 'chatInputPrompt',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['webChat'],
+					},
+				},
+				default: 'What does Parallel Web Systems do?',
+				description: 'Your question or prompt for the AI to answer using web research',
+			},
+			{
+				displayName: 'Response Format',
+				name: 'chatResponseFormat',
+				type: 'options',
+				displayOptions: {
+					show: {
+						operation: ['webChat'],
+					},
+				},
+				options: [
+					{
+						name: 'Text',
+						value: 'text',
+						description: 'Standard text response',
+					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description: 'Structured JSON response with schema',
+					},
+				],
+				default: 'text',
+				description: 'Format of the response',
+			},
+			{
+				displayName: 'JSON Schema Name',
+				name: 'chatJsonSchemaName',
+				type: 'string',
+				displayOptions: {
+					show: {
+						operation: ['webChat'],
+						chatResponseFormat: ['json'],
+					},
+				},
+				default: 'response_schema',
+				description: 'Name for the JSON schema',
+			},
+			{
+				displayName: 'JSON Schema',
+				name: 'chatJsonSchema',
+				type: 'json',
+				typeOptions: {
+					rows: 10,
+				},
+				displayOptions: {
+					show: {
+						operation: ['webChat'],
+						chatResponseFormat: ['json'],
+					},
+				},
+				default: JSON.stringify({
+					type: 'object',
+					properties: {
+						reasoning: {
+							type: 'string',
+							description: 'Think step by step to arrive at the answer',
+						},
+						answer: {
+							type: 'string',
+							description: 'The direct answer to the question',
+						},
+						citations: {
+							type: 'array',
+							items: { type: 'string' },
+							description: 'Sources cited to support the answer',
+						},
+					},
+				}, null, 2),
+				description: 'JSON schema defining the structure of the expected response',
+			},
+			{
+				displayName: 'Additional Options',
+				name: 'chatAdditionalOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				displayOptions: {
+					show: {
+						operation: ['webChat'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'System Prompt',
+						name: 'systemPrompt',
+						type: 'string',
+						typeOptions: {
+							rows: 3,
+						},
+						default: '',
+						placeholder: 'You are a helpful assistant that provides accurate information...',
+						description: 'Optional system prompt to define the AI\'s behavior and role',
+					},
+				],
+			},
 		],
 	};
 
@@ -525,6 +643,9 @@ export class Parallel implements INodeType {
 					returnData.push(result);
 				} else if (operation === 'webSearch') {
 					const result = await executeSearch(this, i);
+					returnData.push(result);
+				} else if (operation === 'webChat') {
+					const result = await executeChat(this, i);
 					returnData.push(result);
 				}
 			} catch (error) {
@@ -843,6 +964,91 @@ async function executeSearch(
 	}
 
 	return await parallelApiRequest(executeFunctions, 'POST', '/v1beta/search', body);
+}
+
+async function executeChat(
+	executeFunctions: IExecuteFunctions,
+	itemIndex: number,
+): Promise<IDataObject> {
+	const inputPrompt = executeFunctions.getNodeParameter('chatInputPrompt', itemIndex) as string;
+	const responseFormat = executeFunctions.getNodeParameter('chatResponseFormat', itemIndex) as string;
+	const additionalOptions = executeFunctions.getNodeParameter('chatAdditionalOptions', itemIndex, {}) as IDataObject;
+
+	// Build messages array
+	const messages: IDataObject[] = [];
+	
+	// Add system prompt if provided
+	if (additionalOptions.systemPrompt) {
+		messages.push({
+			role: 'system',
+			content: additionalOptions.systemPrompt,
+		});
+	}
+
+	// Add user prompt
+	messages.push({
+		role: 'user',
+		content: inputPrompt,
+	});
+
+	// Build request body
+	const body: IDataObject = {
+		model: 'speed',
+		messages,
+		stream: false,
+	};
+
+	// Add response format if JSON is selected
+	if (responseFormat === 'json') {
+		const jsonSchemaName = executeFunctions.getNodeParameter('chatJsonSchemaName', itemIndex) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter('chatJsonSchema', itemIndex) as string;
+		
+		try {
+			const jsonSchema = JSON.parse(jsonSchemaString);
+			body.response_format = {
+				type: 'json_schema',
+				json_schema: {
+					name: jsonSchemaName,
+					schema: jsonSchema,
+				},
+			};
+		} catch (error) {
+			throw new NodeOperationError(
+				executeFunctions.getNode(),
+				`Invalid JSON in schema: ${error.message}`,
+				{ itemIndex },
+			);
+		}
+	}
+
+	return await parallelChatApiRequest(executeFunctions, body);
+}
+
+async function parallelChatApiRequest(
+	executeFunctions: IExecuteFunctions,
+	body: IDataObject,
+): Promise<IDataObject> {
+	const options: IRequestOptions = {
+		method: 'POST',
+		url: 'https://api.parallel.ai/chat/completions',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body,
+		json: true,
+	};
+
+	try {
+		const result = await executeFunctions.helpers.requestWithAuthentication.call(
+			executeFunctions,
+			'parallelApi',
+			options,
+		);
+
+		return result;
+	} catch (error) {
+		throw new NodeOperationError(executeFunctions.getNode(), error as JsonObject);
+	}
 }
 
 function buildSourcePolicy(additionalFields: IDataObject): IDataObject | null {
