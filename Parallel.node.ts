@@ -18,7 +18,7 @@ export class Parallel implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
-		description: 'Web Actions - Web Enrichment and Web Search powered by AI',
+		description: 'Highest accuracy web search tools for AI agents',
 		defaults: {
 			name: 'Parallel',
 		},
@@ -40,25 +40,25 @@ export class Parallel implements INodeType {
 					{
 						name: 'Sync Web Enrichment',
 						value: 'webEnrichment',
-						description: 'Execute a task with AI-powered web research and data extraction',
+						description: 'Execute a Task with the Parallel Task API and retrieve its result.',
 						action: 'Sync Web Enrichment',
 					},
 					{
 						name: 'Async Web Enrichment',
 						value: 'asyncWebEnrichment',
-						description: 'Start a task with AI-powered web research and data extraction (returns immediately with task ID)',
+						description: 'Create a Task with the Parallel Task API and retrieve its Run ID for async retrieval.',
 						action: 'Async Web Enrichment',
 					},
 					{
 						name: 'Web Search',
 						value: 'webSearch',
-						description: 'Search the web with AI-powered processing',
+						description: 'Search the web with the Parallel Search API and retrieve a list of results and excerpts.',
 						action: 'Web Search',
 					},
 					{
 						name: 'Web Chat',
 						value: 'webChat',
-						description: 'AI-powered chat with real-time web access',
+						description: 'AI-powered chat completions API with web access (<5 seconds)',
 						action: 'Web Chat',
 					},
 				],
@@ -351,6 +351,20 @@ export class Parallel implements INodeType {
 					},
 				],
 				default: 'pro',
+			},
+			{
+				displayName: 'Webhook URL',
+				name: 'webhookUrl',
+				type: 'string',
+				required: false,
+				displayOptions: {
+					show: {
+						operation: ['asyncWebEnrichment'],
+					},
+				},
+				default: '',
+				placeholder: 'https://your-domain.com/webhooks/parallel',
+				description: 'Optional webhook URL to receive real-time notifications when the task completes',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -838,6 +852,7 @@ async function executeAsyncTask(
 		itemIndex,
 	) as string;
 	const processor = executeFunctions.getNodeParameter('asyncProcessor', itemIndex) as string;
+	const webhookUrl = executeFunctions.getNodeParameter('webhookUrl', itemIndex, '') as string;
 	const additionalFields = executeFunctions.getNodeParameter(
 		'additionalFields',
 		itemIndex,
@@ -907,17 +922,36 @@ async function executeAsyncTask(
 		body.source_policy = sourcePolicy;
 	}
 
+	// Add webhook configuration if provided
+	if (webhookUrl) {
+		body.webhook = {
+			url: webhookUrl,
+			event_types: ['task_run.status'],
+		};
+	}
+
 	// Create task run and return immediately
-	const taskRun = await parallelApiRequest(executeFunctions, 'POST', '/v1/tasks/runs', body);
+	const taskRun = await parallelApiRequestWithWebhook(executeFunctions, 'POST', '/v1/tasks/runs', body);
 	
 	// Return task information immediately without waiting for completion
-	return {
+	const result: IDataObject = {
 		run_id: taskRun.run_id,
 		status: 'started',
 		processor: processor,
 		created_at: taskRun.created_at || new Date().toISOString(),
 		message: 'Task started successfully. Use the run_id to check status or retrieve results later.',
 	};
+
+	// Add webhook information if configured
+	if (webhookUrl) {
+		result.webhook_configured = true;
+		result.webhook_url = webhookUrl;
+		result.message = 'Task started successfully with webhook notifications. You will receive a webhook call when the task completes.';
+	} else {
+		result.webhook_configured = false;
+	}
+
+	return result;
 }
 
 async function executeSearch(
@@ -1096,6 +1130,37 @@ async function parallelApiRequest(
 		url: `https://api.parallel.ai${endpoint}`,
 		headers: {
 			'Content-Type': 'application/json',
+		},
+		json: true,
+	};
+
+	if (body) {
+		options.body = body;
+	}
+
+	try {
+		return await executeFunctions.helpers.requestWithAuthentication.call(
+			executeFunctions,
+			'parallelApi',
+			options,
+		);
+	} catch (error) {
+		throw new NodeOperationError(executeFunctions.getNode(), error as JsonObject);
+	}
+}
+
+async function parallelApiRequestWithWebhook(
+	executeFunctions: IExecuteFunctions,
+	method: IHttpRequestMethods,
+	endpoint: string,
+	body?: IDataObject,
+): Promise<any> {
+	const options: IRequestOptions = {
+		method,
+		url: `https://api.parallel.ai${endpoint}`,
+		headers: {
+			'Content-Type': 'application/json',
+			'parallel-beta': 'webhook-2025-08-12',
 		},
 		json: true,
 	};
