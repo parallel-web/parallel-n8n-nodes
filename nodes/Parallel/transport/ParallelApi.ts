@@ -138,7 +138,8 @@ function handleApiError(executeFunctions: IExecuteFunctions, error: any): Error 
 	const statusCode = parseInt(error.httpCode || error.status || error.statusCode || '0');
 	const errorResponse = error.response?.body || error.body || error;
 	
-	// Get the actual error message from the API
+	// Extract error message and detail from Parallel API response
+	// The Parallel API consistently returns: { "error": { "message": "...", "detail": {...} } }
 	let errorMessage = 'Request failed';
 	let errorDetail = '';
 	
@@ -147,7 +148,7 @@ function handleApiError(executeFunctions: IExecuteFunctions, error: any): Error 
 		errorMessage = error.description;
 	}
 	
-	// Try to extract from messages array (raw API response)
+	// Extract from Parallel API response structure
 	if (error.messages && error.messages.length > 0) {
 		try {
 			const rawMessage = error.messages[0];
@@ -165,13 +166,15 @@ function handleApiError(executeFunctions: IExecuteFunctions, error: any): Error 
 				}
 			}
 		} catch (e) {
-			// If parsing fails, continue with other extraction methods
+			// If parsing fails, use fallback methods
 		}
 	}
 	
 	// Fallback: try to extract from nested error response
-	if (errorMessage === 'Request failed' && errorResponse?.error) {
-		errorMessage = errorResponse.error.message || errorMessage;
+	if (!errorDetail && errorResponse?.error) {
+		if (errorMessage === 'Request failed' && errorResponse.error.message) {
+			errorMessage = errorResponse.error.message;
+		}
 		if (errorResponse.error.detail) {
 			errorDetail = typeof errorResponse.error.detail === 'string' 
 				? errorResponse.error.detail 
