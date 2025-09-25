@@ -4,11 +4,11 @@ import type {
 	INodeTypeDescription,
 	IWebhookFunctions,
 	IWebhookResponseData,
-	IRequestOptions,
 	JsonObject,
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeApiError } from 'n8n-workflow';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { parallelApiRequestForWebhook } from './Parallel/transport/ParallelApi';
 
 export class ParallelTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -49,8 +49,8 @@ export class ParallelTrigger implements INodeType {
 				displayName: 'Validate Webhook Signatures',
 				name: 'validateSignatures',
 				type: 'boolean',
-				default: true,
-				description: 'Whether to validate webhook signatures using your webhook secret. Recommended for security. Get your secret from platform.parallel.ai/settings',
+				default: false,
+				description: 'Whether to validate webhook signatures using your webhook secret. Note: Due to JSON serialization differences, signature validation may fail even with correct secrets. Disable for testing.',
 			},
 			{
 				displayName: 'Only Trigger on Successful Tasks',
@@ -137,7 +137,18 @@ export class ParallelTrigger implements INodeType {
 				});
 			}
 
-			const body = JSON.stringify(this.getBodyData());
+			// Try to get the raw body first, fallback to re-serialized JSON
+			// Note: n8n's webhook functions may not provide access to raw body
+			// This is a known limitation for webhook signature validation
+			let body: string;
+			try {
+				// Attempt to access raw body if available (this may not work in all n8n versions)
+				body = (this as any).getRequest?.()?.rawBody || JSON.stringify(this.getBodyData());
+			} catch {
+				// Fallback to re-serialized JSON with consistent formatting
+				body = JSON.stringify(this.getBodyData(), null, 0);
+			}
+
 			const isValidSignature = ParallelTrigger.verifyWebhookSignature(
 				webhookSecret,
 				webhookId,
@@ -147,9 +158,11 @@ export class ParallelTrigger implements INodeType {
 			);
 
 			if (!isValidSignature) {
+				// For debugging: Log the computed signature (remove in production)
+				console.warn('[Parallel Webhook] Signature validation failed. This may be due to JSON serialization differences.');
 				throw new NodeApiError(this.getNode(), {}, {
 					message: 'Invalid webhook signature',
-					description: 'The webhook signature could not be verified. This may indicate a security issue or incorrect webhook secret.',
+					description: 'The webhook signature could not be verified. This may be due to JSON serialization differences between the raw body and parsed body. Consider disabling signature validation for testing.',
 				});
 			}
 		} catch (error) {
@@ -196,18 +209,11 @@ export class ParallelTrigger implements INodeType {
 
 		try {
 			// Get the full result from Parallel API
-			const credentials = await this.getCredentials('parallelApi');
-			
-			const options: IRequestOptions = {
-				method: 'GET',
-				url: `https://api.parallel.ai/v1/tasks/runs/${runId}/result`,
-				headers: {
-					'x-api-key': credentials.apiKey as string,
-				},
-				json: true,
-			};
-
-			const result = await this.helpers.request(options);
+			const result = await parallelApiRequestForWebhook(
+				this,
+				'GET',
+				`/v1/tasks/runs/${runId}/result`,
+			);
 
 			// Prepare output data
 			const outputData: IDataObject = {

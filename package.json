@@ -39,11 +39,11 @@
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"credentials": [
-			"dist/ParallelApi.credentials.js"
+			"dist/credentials/ParallelApi.credentials.js"
 		],
 		"nodes": [
-			"dist/Parallel.node.js",
-			"dist/ParallelTrigger.node.js"
+			"dist/nodes/Parallel/Parallel.node.js",
+			"dist/nodes/ParallelTrigger.node.js"
 		]
 	},
 	"devDependencies": {
