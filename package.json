@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-parallel",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "n8n community node for Parallel AI - AI-powered research and data extraction",
 	"keywords": [
 		"n8n-community-node-package",
@@ -52,11 +52,14 @@
 		"eslint": "^8.57.0",
 		"eslint-plugin-n8n-nodes-base": "^1.16.3",
 		"gulp": "^5.0.0",
-		"n8n-workflow": "^1.82.0",
+		"n8n-workflow": "^1.110.0",
 		"prettier": "^3.5.3",
 		"typescript": "^5.8.2"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
+	},
+	"overrides": {
+		"form-data": "^4.0.4"
 	}
 }
