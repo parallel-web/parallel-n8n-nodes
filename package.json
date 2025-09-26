@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-parallel",
-	"version": "0.0.6",
+	"version": "0.1.0",
 	"description": "n8n community node for Parallel AI - AI-powered research and data extraction",
 	"keywords": [
 		"n8n-community-node-package",
