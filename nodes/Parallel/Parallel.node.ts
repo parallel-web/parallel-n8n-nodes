@@ -5,7 +5,7 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 import { operations, operationDescriptions } from './actions';
 
 export class Parallel implements INodeType {
@@ -20,8 +20,8 @@ export class Parallel implements INodeType {
 		defaults: {
 			name: 'Parallel',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'parallelApi',

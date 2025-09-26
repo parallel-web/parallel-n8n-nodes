@@ -6,7 +6,7 @@ import type {
 	IWebhookResponseData,
 	JsonObject,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeApiError } from 'n8n-workflow';
+import { NodeApiError } from 'n8n-workflow';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { parallelApiRequestForWebhook } from './Parallel/transport/ParallelApi';
 
@@ -22,7 +22,7 @@ export class ParallelTrigger implements INodeType {
 			name: 'Parallel Task Run Completion',
 		},
 		inputs: [],
-		outputs: [NodeConnectionType.Main],
+		outputs: ['main'],
 		credentials: [
 			{
 				name: 'parallelApi',
