@@ -1,10 +1,10 @@
 # n8n-nodes-parallel
 
-This is an n8n community node for [Parallel Web Systems](https://parallel.ai/) - the AI-powered web research platform. Transform your n8n workflows with intelligent data extraction, competitive analysis, lead enrichment, and automated research capabilities.
+This is an n8n community node for [Parallel Web Systems](https://parallel.ai/?utm_source=github) - the AI-powered web research platform. Transform your n8n workflows with intelligent data extraction, competitive analysis, lead enrichment, and automated research capabilities.
 
-Try Parallel in the [playground](https://platform.parallel.ai/play) before integrating into your workflows.
+Try Parallel in the [playground](https://platform.parallel.ai/play?utm_source=github) before integrating into your workflows.
 
-[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/?utm_source=github) workflow automation platform.
 
 ## Installation
 
@@ -14,13 +14,13 @@ Install this community node package in n8n:
 npm install n8n-nodes-parallel
 ```
 
-Or follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
+Or follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/?utm_source=github) in the n8n community nodes documentation.
 
 ### Prerequisites
 
-1. **Get API Access**: Sign up at [platform.parallel.ai](https://platform.parallel.ai/) and generate an API key
+1. **Get API Access**: Sign up at [platform.parallel.ai](https://platform.parallel.ai/?utm_source=github) and generate an API key
 2. **Add Credentials**: In n8n, create new credentials of type "Parallel API" and enter your API key
-3. **Webhook Secret**: In your Parallel n8n credential, include a webhook secret (created via [Platform Settings](https://platform.parallel.ai/settings)) in order to be notified when an Async Web Enrichment Task is completed
+3. **Webhook Secret**: In your Parallel n8n credential, include a webhook secret (created via [Platform Settings](https://platform.parallel.ai/settings?utm_source=github)) in order to be notified when an Async Web Enrichment Task is completed
 
 ## Available Nodes
 
@@ -63,7 +63,7 @@ Intelligent web search with AI-powered processing:
 - Structured results with excerpts and citations
 
 **Available Processors**: `base`, `pro`
-Learn about each Parallel Search API Processor [here](https://docs.parallel.ai/search-api/processors).
+Learn about each Parallel Search API Processor [here](https://docs.parallel.ai/search-api/processors?utm_source=github).
 
 #### **4. Web Chat**
 
@@ -74,7 +74,7 @@ AI-powered chat completions with web access (< 5 seconds):
 - Current events and news queries
 - Research-backed conversations
 
-Read the Parallel Chat API documentation [here](https://docs.parallel.ai/chat-api/chat-quickstart).
+Read the Parallel Chat API documentation [here](https://docs.parallel.ai/chat-api/chat-quickstart?utm_source=github).
 
 ### 🔔 **Parallel Task Run Completion Trigger**
 
@@ -141,8 +141,8 @@ Use [source policies](https://docs.parallel.ai/features/source-policy.md) to inc
 ## Getting Started
 
 1. **Install**: `npm install n8n-nodes-parallel`
-2. **Get API Access**: Sign up at [platform.parallel.ai](https://platform.parallel.ai/) and generate an API key
-3. **Try the Playground**: Test your research tasks at [platform.parallel.ai/play](https://platform.parallel.ai/play)
+2. **Get API Access**: Sign up at [platform.parallel.ai](https://platform.parallel.ai/?utm_source=github) and generate an API key
+3. **Try the Playground**: Test your research tasks at [platform.parallel.ai/play](https://platform.parallel.ai/play?utm_source=github)
 4. **Add Credentials**: Configure your API key in n8n's credential manager  
 5. **Build Workflows**: Start with simple enrichment tasks and scale to complex research pipelines
 
@@ -238,19 +238,19 @@ Control which websites are used for research:
 
 ## Resources
 
-- [Parallel Documentation](https://docs.parallel.ai/)
+- [Parallel Documentation](https://docs.parallel.ai/?utm_source=github)
 - [Task API Quickstart](https://docs.parallel.ai/task-api/task-quickstart.md)
 - [Search API Quickstart](https://docs.parallel.ai/search-api/search-quickstart.md)
 - [Processor Selection Guide](https://docs.parallel.ai/task-api/core-concepts/choose-a-processor.md)
 - [Understanding Task Specifications](https://docs.parallel.ai/task-api/core-concepts/specify-a-task.md)
-- [Webhook Configuration](https://docs.parallel.ai/task-api/features/webhooks)
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
+- [Webhook Configuration](https://docs.parallel.ai/task-api/features/webhooks?utm_source=github)
+- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/?utm_source=github)
 
 ## Support & Community
 
 - **Issues**: [GitHub Issues](https://github.com/parallel-web/parallel-n8n-nodes/issues)
-- **Documentation**: [docs.parallel.ai](https://docs.parallel.ai/)
-- **Platform**: [platform.parallel.ai](https://platform.parallel.ai/)
+- **Documentation**: [docs.parallel.ai](https://docs.parallel.ai/?utm_source=github)
+- **Platform**: [platform.parallel.ai](https://platform.parallel.ai/?utm_source=github)
 
 ## License
 
