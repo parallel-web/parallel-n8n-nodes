@@ -3,6 +3,7 @@ import type {
 	IDataObject,
 	INodePropertyOptions,
 } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
 import { buildMetadata } from '../utils';
 
@@ -39,7 +40,12 @@ export async function execute(
 	const outputSchemaType = executeFunctions.getNodeParameter('monitorOutputSchemaType', itemIndex, 'text') as string;
 	if (outputSchemaType === 'json') {
 		const jsonSchemaStr = executeFunctions.getNodeParameter('monitorOutputJsonSchema', itemIndex) as string;
-		const jsonSchema = typeof jsonSchemaStr === 'string' ? JSON.parse(jsonSchemaStr) : jsonSchemaStr;
+		let jsonSchema: IDataObject;
+		try {
+			jsonSchema = typeof jsonSchemaStr === 'string' ? JSON.parse(jsonSchemaStr) : jsonSchemaStr;
+		} catch (e) {
+			throw new NodeOperationError(executeFunctions.getNode(), 'Invalid JSON schema for monitor output. Please provide valid JSON.', { itemIndex });
+		}
 		body.output_schema = {
 			type: 'json',
 			json_schema: jsonSchema,
