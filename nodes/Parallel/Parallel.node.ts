@@ -6,7 +6,7 @@ import type {
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { operations, operationDescriptions } from './actions';
+import { operations, operationDescriptions, monitorOperationDescriptions } from './actions';
 
 export class Parallel implements INodeType {
 	description: INodeTypeDescription = {
@@ -15,7 +15,7 @@ export class Parallel implements INodeType {
 		icon: 'file:parallel.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"]}}',
+		subtitle: '={{$parameter["resource"] === "monitor" ? "Monitor / " + $parameter["monitorOperation"] : $parameter["operation"]}}',
 		description: 'Highest accuracy web search tools for AI agents',
 		defaults: {
 			name: 'Parallel',
@@ -30,13 +30,50 @@ export class Parallel implements INodeType {
 		],
 		properties: [
 			{
+				displayName: 'Resource',
+				name: 'resource',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Task',
+						value: 'task',
+					},
+					{
+						name: 'Monitor',
+						value: 'monitor',
+					},
+				],
+				default: 'task',
+			},
+			{
 				displayName: 'Operation',
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['task'],
+					},
+				},
 				options: operationDescriptions,
 				default: 'webEnrichment',
 			},
+			{
+				displayName: 'Operation',
+				name: 'monitorOperation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+					},
+				},
+				options: monitorOperationDescriptions,
+				default: 'createMonitor',
+			},
+
+			// ===== TASK FIELDS (existing) =====
 			// WEB ENRICHMENT FIELDS
 			{
 				displayName: 'Input Type',
@@ -45,6 +82,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment', 'asyncWebEnrichment'],
 					},
 				},
@@ -69,6 +107,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment', 'asyncWebEnrichment'],
 						inputType: ['text'],
 					},
@@ -87,6 +126,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment', 'asyncWebEnrichment'],
 						inputType: ['json'],
 					},
@@ -101,6 +141,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment'],
 					},
 				},
@@ -125,6 +166,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['asyncWebEnrichment'],
 					},
 				},
@@ -154,6 +196,7 @@ export class Parallel implements INodeType {
 				required: false,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment'],
 						outputSchemaType: ['text'],
 						inputType: ['text'],
@@ -170,6 +213,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment'],
 						outputSchemaType: ['text'],
 						inputType: ['json'],
@@ -189,6 +233,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment'],
 						outputSchemaType: ['json'],
 					},
@@ -207,6 +252,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['asyncWebEnrichment'],
 						asyncOutputSchemaType: ['json'],
 					},
@@ -219,10 +265,10 @@ export class Parallel implements INodeType {
 				displayName: 'Processor',
 				name: 'processor',
 				type: 'options',
-				// When choosing pro or above, ensure your workflow timeout is sufficient. Ultra tasks may take up to 30 minutes.
 				description: 'Processor used for the task.',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment'],
 					},
 				},
@@ -242,7 +288,7 @@ export class Parallel implements INodeType {
 						value: 'core',
 						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
 					},
-		
+
 				],
 				default: 'base',
 			},
@@ -253,6 +299,7 @@ export class Parallel implements INodeType {
 				description: 'Processor used for the async task. Higher-end processors for longer-running tasks.',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['asyncWebEnrichment'],
 					},
 				},
@@ -307,6 +354,7 @@ export class Parallel implements INodeType {
 				required: false,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['asyncWebEnrichment'],
 					},
 				},
@@ -321,6 +369,7 @@ export class Parallel implements INodeType {
 				placeholder: 'Add Field',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webEnrichment', 'asyncWebEnrichment'],
 					},
 				},
@@ -382,6 +431,7 @@ export class Parallel implements INodeType {
 				required: false,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webSearch'],
 					},
 				},
@@ -395,6 +445,7 @@ export class Parallel implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webSearch'],
 					},
 				},
@@ -419,6 +470,7 @@ export class Parallel implements INodeType {
 				placeholder: 'Add Field',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webSearch'],
 					},
 				},
@@ -485,6 +537,7 @@ export class Parallel implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webChat'],
 					},
 				},
@@ -497,6 +550,7 @@ export class Parallel implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webChat'],
 					},
 				},
@@ -521,6 +575,7 @@ export class Parallel implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webChat'],
 						chatResponseFormat: ['json'],
 					},
@@ -537,6 +592,7 @@ export class Parallel implements INodeType {
 				},
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webChat'],
 						chatResponseFormat: ['json'],
 					},
@@ -574,6 +630,7 @@ export class Parallel implements INodeType {
 				placeholder: 'Add Option',
 				displayOptions: {
 					show: {
+						resource: ['task'],
 						operation: ['webChat'],
 					},
 				},
@@ -592,35 +649,459 @@ export class Parallel implements INodeType {
 					},
 				],
 			},
+
+			// ===== MONITOR FIELDS =====
+
+			// Create Monitor fields
+			{
+				displayName: 'Query',
+				name: 'monitorQuery',
+				type: 'string',
+				typeOptions: {
+					rows: 3,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				default: '',
+				placeholder: 'Track funding announcements for AI startups',
+				description: 'What to monitor - natural language description of the events to track on the web',
+			},
+			{
+				displayName: 'Cadence',
+				name: 'monitorCadence',
+				type: 'options',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				options: [
+					{
+						name: 'Hourly',
+						value: 'hourly',
+						description: 'Run every hour - best for fast-moving topics',
+					},
+					{
+						name: 'Daily',
+						value: 'daily',
+						description: 'Run once per day - best for most news tracking',
+					},
+					{
+						name: 'Weekly',
+						value: 'weekly',
+						description: 'Run once per week - best for slower-changing topics',
+					},
+					{
+						name: 'Every Two Weeks',
+						value: 'every_two_weeks',
+						description: 'Run every two weeks',
+					},
+				],
+				default: 'daily',
+			},
+			{
+				displayName: 'Output Schema Type',
+				name: 'monitorOutputSchemaType',
+				type: 'options',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				options: [
+					{
+						name: 'Text',
+						value: 'text',
+						description: 'Unstructured text output',
+					},
+					{
+						name: 'JSON',
+						value: 'json',
+						description: 'Structured JSON output with a schema',
+					},
+				],
+				default: 'text',
+			},
+			{
+				displayName: 'JSON Schema',
+				name: 'monitorOutputJsonSchema',
+				type: 'json',
+				typeOptions: {
+					rows: 10,
+				},
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+						monitorOutputSchemaType: ['json'],
+					},
+				},
+				default: '{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Company name"\n    },\n    "event_summary": {\n      "type": "string",\n      "description": "Brief summary of the event"\n    },\n    "sentiment": {\n      "type": "string",\n      "description": "Sentiment: positive, negative, or neutral"\n    }\n  }\n}',
+				description: 'JSON schema defining the structure of monitor event outputs',
+			},
+			{
+				displayName: 'Webhook URL',
+				name: 'monitorWebhookUrl',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				default: '',
+				placeholder: 'https://your-n8n-instance.com/webhook/parallel-monitor-event',
+				description: 'Webhook URL to receive notifications when events are detected. Use the URL from a Parallel Monitor Event Trigger node.',
+			},
+			{
+				displayName: 'Webhook Event Types',
+				name: 'monitorWebhookEventTypes',
+				type: 'multiOptions',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				options: [
+					{
+						name: 'Event Detected',
+						value: 'monitor.event.detected',
+					},
+					{
+						name: 'Execution Completed',
+						value: 'monitor.execution.completed',
+					},
+					{
+						name: 'Execution Failed',
+						value: 'monitor.execution.failed',
+					},
+				],
+				default: ['monitor.event.detected'],
+				description: 'Which webhook event types to subscribe to',
+			},
+			{
+				displayName: 'Additional Fields',
+				name: 'monitorAdditionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Metadata',
+						name: 'metadata',
+						type: 'fixedCollection',
+						typeOptions: {
+							multipleValues: true,
+						},
+						default: {},
+						options: [
+							{
+								displayName: 'Metadata Fields',
+								name: 'metadataFields',
+								values: [
+									{
+										displayName: 'Key',
+										name: 'key',
+										type: 'string',
+										default: '',
+									},
+									{
+										displayName: 'Value',
+										name: 'value',
+										type: 'string',
+										default: '',
+									},
+								],
+							},
+						],
+						description: 'Custom metadata to store with the monitor',
+					},
+				],
+			},
+
+			// Monitor ID field (shared across get, update, delete, list events, get event group)
+			{
+				displayName: 'Monitor ID',
+				name: 'monitorId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['getMonitor', 'updateMonitor', 'deleteMonitor', 'listMonitorEvents', 'getMonitorEventGroup'],
+					},
+				},
+				default: '',
+				placeholder: 'monitor_b0079f70195e4258a3b982c1b6d8bd3a',
+				description: 'The ID of the monitor',
+			},
+
+			// List Monitors additional fields
+			{
+				displayName: 'Additional Fields',
+				name: 'listMonitorsAdditionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['listMonitors'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						typeOptions: {
+							minValue: 1,
+							maxValue: 10000,
+						},
+						default: 20,
+						description: 'Maximum number of monitors to return',
+					},
+					{
+						displayName: 'Cursor Monitor ID',
+						name: 'cursorMonitorId',
+						type: 'string',
+						default: '',
+						description: 'Monitor ID to use as cursor for pagination (returns monitors after this ID)',
+					},
+				],
+			},
+
+			// Update Monitor fields
+			{
+				displayName: 'Update Fields',
+				name: 'monitorUpdateFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['updateMonitor'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Query',
+						name: 'query',
+						type: 'string',
+						typeOptions: {
+							rows: 3,
+						},
+						default: '',
+						description: 'Updated monitoring query',
+					},
+					{
+						displayName: 'Cadence',
+						name: 'cadence',
+						type: 'options',
+						options: [
+							{
+								name: 'Hourly',
+								value: 'hourly',
+							},
+							{
+								name: 'Daily',
+								value: 'daily',
+							},
+							{
+								name: 'Weekly',
+								value: 'weekly',
+							},
+							{
+								name: 'Every Two Weeks',
+								value: 'every_two_weeks',
+							},
+						],
+						default: 'daily',
+						description: 'Updated monitoring cadence',
+					},
+					{
+						displayName: 'Webhook URL',
+						name: 'webhookUrl',
+						type: 'string',
+						default: '',
+						description: 'Updated webhook URL for notifications',
+					},
+					{
+						displayName: 'Webhook Event Types',
+						name: 'webhookEventTypes',
+						type: 'multiOptions',
+						options: [
+							{
+								name: 'Event Detected',
+								value: 'monitor.event.detected',
+							},
+							{
+								name: 'Execution Completed',
+								value: 'monitor.execution.completed',
+							},
+							{
+								name: 'Execution Failed',
+								value: 'monitor.execution.failed',
+							},
+						],
+						default: ['monitor.event.detected'],
+						description: 'Updated webhook event types',
+					},
+					{
+						displayName: 'Metadata',
+						name: 'metadata',
+						type: 'fixedCollection',
+						typeOptions: {
+							multipleValues: true,
+						},
+						default: {},
+						options: [
+							{
+								displayName: 'Metadata Fields',
+								name: 'metadataFields',
+								values: [
+									{
+										displayName: 'Key',
+										name: 'key',
+										type: 'string',
+										default: '',
+									},
+									{
+										displayName: 'Value',
+										name: 'value',
+										type: 'string',
+										default: '',
+									},
+								],
+							},
+						],
+						description: 'Updated metadata',
+					},
+				],
+			},
+
+			// List Monitor Events additional fields
+			{
+				displayName: 'Additional Fields',
+				name: 'monitorEventsAdditionalFields',
+				type: 'collection',
+				placeholder: 'Add Field',
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['listMonitorEvents'],
+					},
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Lookback Period',
+						name: 'lookbackPeriod',
+						type: 'string',
+						default: '',
+						placeholder: '7d',
+						description: 'How far back to look for events (e.g., 1h, 7d, 2w). Defaults to 10d.',
+					},
+				],
+			},
+
+			// Get Event Group fields
+			{
+				displayName: 'Event Group ID',
+				name: 'eventGroupId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['getMonitorEventGroup'],
+					},
+				},
+				default: '',
+				placeholder: 'mevtgrp_b0079f70195e4258eab1e7284340f1a9ec3a8033ed236a24',
+				description: 'The ID of the event group to retrieve',
+			},
 		],
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: IDataObject[] = [];
-		const operation = this.getNodeParameter('operation', 0) as string;
+		const resource = this.getNodeParameter('resource', 0, 'task') as string;
 
 		for (let i = 0; i < items.length; i++) {
 			try {
 				let result: IDataObject;
 
-				switch (operation) {
-					case 'webEnrichment':
-						result = await operations.webEnrichment.execute(this, i);
-						break;
-					case 'asyncWebEnrichment':
-						result = await operations.asyncWebEnrichment.execute(this, i);
-						break;
-					case 'webSearch':
-						result = await operations.webSearch.execute(this, i);
-						break;
-					case 'webChat':
-						result = await operations.webChat.execute(this, i);
-						break;
-					default:
-						throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`, {
-							itemIndex: i,
-						});
+				if (resource === 'monitor') {
+					const monitorOperation = this.getNodeParameter('monitorOperation', i) as string;
+
+					switch (monitorOperation) {
+						case 'createMonitor':
+							result = await operations.createMonitor.execute(this, i);
+							break;
+						case 'getMonitor':
+							result = await operations.getMonitor.execute(this, i);
+							break;
+						case 'listMonitors':
+							result = await operations.listMonitors.execute(this, i);
+							break;
+						case 'updateMonitor':
+							result = await operations.updateMonitor.execute(this, i);
+							break;
+						case 'deleteMonitor':
+							result = await operations.deleteMonitor.execute(this, i);
+							break;
+						case 'listMonitorEvents':
+							result = await operations.listMonitorEvents.execute(this, i);
+							break;
+						case 'getMonitorEventGroup':
+							result = await operations.getMonitorEventGroup.execute(this, i);
+							break;
+						default:
+							throw new NodeOperationError(this.getNode(), `Unknown monitor operation: ${monitorOperation}`, {
+								itemIndex: i,
+							});
+					}
+				} else {
+					const operation = this.getNodeParameter('operation', i) as string;
+
+					switch (operation) {
+						case 'webEnrichment':
+							result = await operations.webEnrichment.execute(this, i);
+							break;
+						case 'asyncWebEnrichment':
+							result = await operations.asyncWebEnrichment.execute(this, i);
+							break;
+						case 'webSearch':
+							result = await operations.webSearch.execute(this, i);
+							break;
+						case 'webChat':
+							result = await operations.webChat.execute(this, i);
+							break;
+						default:
+							throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`, {
+								itemIndex: i,
+							});
+					}
 				}
 
 				returnData.push(result);

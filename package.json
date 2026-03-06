@@ -43,7 +43,8 @@
 		],
 		"nodes": [
 			"dist/nodes/Parallel/Parallel.node.js",
-			"dist/nodes/ParallelTrigger.node.js"
+			"dist/nodes/ParallelTrigger.node.js",
+			"dist/nodes/ParallelMonitorTrigger.node.js"
 		]
 	},
 	"devDependencies": {
