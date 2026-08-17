@@ -1,12 +1,12 @@
 import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
-import { parallelApiRequest } from '../transport/ParallelApi';
 import { encodePathSegment } from '../contracts/requests';
+import { parallelApiRequest } from '../transport/ParallelApi';
 
 export const description: INodePropertyOptions = {
-	name: 'Get Monitor',
-	value: 'getMonitor',
-	description: 'Retrieve details of a specific monitor by ID',
-	action: 'Get a monitor',
+	name: 'Trigger Monitor',
+	value: 'triggerMonitor',
+	description: 'Run a monitor immediately without changing its schedule',
+	action: 'Trigger a monitor',
 };
 
 export async function execute(
@@ -16,7 +16,7 @@ export async function execute(
 	const monitorId = executeFunctions.getNodeParameter('monitorId', itemIndex) as string;
 	return await parallelApiRequest(
 		executeFunctions,
-		'GET',
-		`/v1/monitors/${encodePathSegment(monitorId)}`,
+		'POST',
+		`/v1/monitors/${encodePathSegment(monitorId)}/trigger`,
 	);
 }

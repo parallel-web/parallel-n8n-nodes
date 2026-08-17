@@ -9,6 +9,9 @@ import * as updateMonitor from './updateMonitor.operation';
 import * as deleteMonitor from './deleteMonitor.operation';
 import * as listMonitorEvents from './listMonitorEvents.operation';
 import * as getMonitorEventGroup from './getMonitorEventGroup.operation';
+import * as getTaskRun from './getTaskRun.operation';
+import * as getTaskRunResult from './getTaskRunResult.operation';
+import * as triggerMonitor from './triggerMonitor.operation';
 
 export const operations = {
 	webEnrichment,
@@ -22,6 +25,9 @@ export const operations = {
 	deleteMonitor,
 	listMonitorEvents,
 	getMonitorEventGroup,
+	getTaskRun,
+	getTaskRunResult,
+	triggerMonitor,
 };
 
 // Export operation descriptions for the node property options
@@ -30,6 +36,8 @@ export const operationDescriptions = [
 	asyncWebEnrichment.description,
 	webSearch.description,
 	webChat.description,
+	getTaskRun.description,
+	getTaskRunResult.description,
 ];
 
 export const monitorOperationDescriptions = [
@@ -40,4 +48,5 @@ export const monitorOperationDescriptions = [
 	deleteMonitor.description,
 	listMonitorEvents.description,
 	getMonitorEventGroup.description,
+	triggerMonitor.description,
 ];

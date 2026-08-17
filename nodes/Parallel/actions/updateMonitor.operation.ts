@@ -1,15 +1,13 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import { buildMonitorUpdateRequest, encodePathSegment } from '../contracts/requests';
 import { parallelApiRequest } from '../transport/ParallelApi';
 import { buildMetadata } from '../utils';
 
 export const description: INodePropertyOptions = {
 	name: 'Update Monitor',
 	value: 'updateMonitor',
-	description: 'Update an existing monitor\'s query, cadence, webhook, or metadata.',
+	description: "Update an existing monitor's query, cadence, webhook, or metadata",
 	action: 'Update a monitor',
 };
 
@@ -18,28 +16,35 @@ export async function execute(
 	itemIndex: number,
 ): Promise<IDataObject> {
 	const monitorId = executeFunctions.getNodeParameter('monitorId', itemIndex) as string;
-	const updateFields = executeFunctions.getNodeParameter('monitorUpdateFields', itemIndex, {}) as IDataObject;
-
-	const body: IDataObject = {};
-
-	if (updateFields.query) {
-		body.query = updateFields.query;
-	}
-	if (updateFields.cadence) {
-		body.cadence = updateFields.cadence;
-	}
-	if (updateFields.webhookUrl) {
-		const eventTypes = (updateFields.webhookEventTypes as string[]) || ['monitor.event.detected'];
-		body.webhook = {
-			url: updateFields.webhookUrl,
-			event_types: eventTypes,
-		};
-	}
+	const updateFields = executeFunctions.getNodeParameter(
+		'monitorUpdateFields',
+		itemIndex,
+		{},
+	) as IDataObject;
 
 	const metadata = buildMetadata(updateFields);
-	if (metadata) {
-		body.metadata = metadata;
+	let body: IDataObject;
+	try {
+		body = buildMonitorUpdateRequest({
+			query: updateFields.query as string | undefined,
+			frequency: updateFields.cadence as string | undefined,
+			webhookUrl: updateFields.webhookUrl as string | undefined,
+			webhookEventTypes: updateFields.webhookEventTypes as string[] | undefined,
+			metadata: metadata ?? undefined,
+			clearWebhook: updateFields.clearWebhook as boolean | undefined,
+			clearMetadata: updateFields.clearMetadata as boolean | undefined,
+		});
+	} catch (error) {
+		throw new NodeOperationError(
+			executeFunctions.getNode(),
+			error instanceof Error ? error : String(error),
+			{ itemIndex },
+		);
 	}
-
-	return await parallelApiRequest(executeFunctions, 'POST', `/v1alpha/monitors/${monitorId}`, body);
+	return await parallelApiRequest(
+		executeFunctions,
+		'POST',
+		`/v1/monitors/${encodePathSegment(monitorId)}/update`,
+		body,
+	);
 }

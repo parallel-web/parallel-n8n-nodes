@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-parallel",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "n8n community node for Parallel AI - AI-powered research and data extraction",
 	"keywords": [
 		"n8n-community-node-package",
@@ -11,56 +11,58 @@
 		"data-extraction"
 	],
 	"license": "MIT",
-	"homepage": "https://github.com/parallel-web/paralllel-n8n-nodes",
+	"homepage": "https://github.com/parallel-web/parallel-n8n-nodes",
 	"author": {
 		"name": "Jan Wilmake",
 		"email": "jan@wilmake.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/parallel-web/paralllel-n8n-nodes.git"
+		"url": "https://github.com/parallel-web/parallel-n8n-nodes.git"
 	},
 	"engines": {
-		"node": ">=20.15"
+		"node": ">=22.22"
 	},
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "npx rimraf dist && tsc && gulp build:icons",
-		"dev": "tsc --watch",
-		"format": "prettier --write",
-		"lint": "eslint package.json",
-		"lintfix": "eslint package.json --fix",
-		"prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js package.json",
-		"scan-package": "npx @n8n/scan-community-package n8n-nodes-parallel"
+		"build": "n8n-node build",
+		"dev": "n8n-node dev",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"lint": "n8n-node lint",
+		"lintfix": "n8n-node lint --fix",
+		"typecheck": "tsc --noEmit --incremental false",
+		"test": "npm run build && node --test test/*.test.js",
+		"prerelease": "n8n-node prerelease",
+		"check-package": "node scripts/check-package.mjs",
+		"release": "n8n-node release",
+		"prepublishOnly": "npm run prerelease && npm run check-package"
 	},
 	"files": [
 		"dist"
 	],
 	"n8n": {
 		"n8nNodesApiVersion": 1,
+		"strict": true,
 		"credentials": [
 			"dist/credentials/ParallelApi.credentials.js"
 		],
 		"nodes": [
 			"dist/nodes/Parallel/Parallel.node.js",
-			"dist/nodes/ParallelTrigger.node.js",
-			"dist/nodes/ParallelMonitorTrigger.node.js"
+			"dist/nodes/ParallelTrigger/ParallelTrigger.node.js",
+			"dist/nodes/ParallelMonitorTrigger/ParallelMonitorTrigger.node.js"
 		]
 	},
 	"devDependencies": {
-		"@types/node": "^24.5.2",
-		"@typescript-eslint/parser": "~8.32.0",
-		"eslint": "^8.57.0",
-		"eslint-plugin-n8n-nodes-base": "^1.16.3",
-		"gulp": "^5.0.0",
-		"n8n-workflow": "^1.110.0",
-		"prettier": "^3.5.3",
-		"typescript": "^5.8.2"
+		"@n8n/node-cli": "0.43.4",
+		"@types/node": "^24.13.3",
+		"eslint": "9.39.4",
+		"n8n-workflow": "^2.16.0",
+		"prettier": "3.8.3",
+		"typescript": "5.9.3"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
 	},
-	"overrides": {
-		"form-data": "^4.0.4"
-	}
+	"packageManager": "npm@11.6.0"
 }

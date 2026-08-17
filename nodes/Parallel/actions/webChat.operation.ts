@@ -1,8 +1,4 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
 
@@ -18,12 +14,20 @@ export async function execute(
 	itemIndex: number,
 ): Promise<IDataObject> {
 	const inputPrompt = executeFunctions.getNodeParameter('chatInputPrompt', itemIndex) as string;
-	const responseFormat = executeFunctions.getNodeParameter('chatResponseFormat', itemIndex) as string;
-	const additionalOptions = executeFunctions.getNodeParameter('chatAdditionalOptions', itemIndex, {}) as IDataObject;
+	const model = executeFunctions.getNodeParameter('chatModel', itemIndex, 'speed') as string;
+	const responseFormat = executeFunctions.getNodeParameter(
+		'chatResponseFormat',
+		itemIndex,
+	) as string;
+	const additionalOptions = executeFunctions.getNodeParameter(
+		'chatAdditionalOptions',
+		itemIndex,
+		{},
+	) as IDataObject;
 
 	// Build messages array
 	const messages: IDataObject[] = [];
-	
+
 	// Add system prompt if provided
 	if (additionalOptions.systemPrompt) {
 		messages.push({
@@ -40,16 +44,27 @@ export async function execute(
 
 	// Build request body
 	const body: IDataObject = {
-		model: 'speed',
+		model,
 		messages,
 		stream: false,
 	};
 
 	// Add response format if JSON is selected
 	if (responseFormat === 'json') {
-		const jsonSchemaName = executeFunctions.getNodeParameter('chatJsonSchemaName', itemIndex) as string;
-		const jsonSchemaString = executeFunctions.getNodeParameter('chatJsonSchema', itemIndex) as string;
-		
+		const jsonSchemaName = executeFunctions.getNodeParameter(
+			'chatJsonSchemaName',
+			itemIndex,
+		) as string;
+		if (!jsonSchemaName.trim()) {
+			throw new NodeOperationError(executeFunctions.getNode(), 'JSON schema name is required.', {
+				itemIndex,
+			});
+		}
+		const jsonSchemaString = executeFunctions.getNodeParameter(
+			'chatJsonSchema',
+			itemIndex,
+		) as string;
+
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			body.response_format = {

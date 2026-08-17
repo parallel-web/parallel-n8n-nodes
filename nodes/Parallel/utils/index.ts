@@ -1,4 +1,5 @@
 import type { IDataObject } from 'n8n-workflow';
+import { sleep } from 'n8n-workflow';
 
 /**
  * Builds a source policy object from additional fields
@@ -54,16 +55,20 @@ export function buildMetadata(additionalFields: IDataObject): IDataObject | null
  * Waits for a specified amount of time
  */
 export function wait(ms: number): Promise<void> {
-	return new Promise(resolve => setTimeout(resolve, ms));
+	return sleep(ms);
 }
 
 /**
  * Calculates exponential backoff delay with jitter
  */
-export function calculateBackoffDelay(attempt: number, baseDelay: number = 2000, maxDelay: number = 60000): number {
+export function calculateBackoffDelay(
+	attempt: number,
+	baseDelay: number = 2000,
+	maxDelay: number = 60000,
+): number {
 	// Calculate exponential backoff delay (base 2 seconds, max 60 seconds)
 	const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-	
+
 	// Add jitter to prevent thundering herd
 	const jitter = Math.random() * 1000;
 	return delay + jitter;
@@ -72,7 +77,8 @@ export function calculateBackoffDelay(attempt: number, baseDelay: number = 2000,
 /**
  * Checks if an error is retryable based on status code
  */
-export function isRetryableError(statusCode: number | string): boolean {
-	const code = parseInt(statusCode.toString());
+export function isRetryableError(statusCode: number | string | undefined): boolean {
+	if (statusCode === undefined) return false;
+	const code = parseInt(statusCode.toString(), 10);
 	return [408, 429, 500, 502, 503].includes(code);
 }
