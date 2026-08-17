@@ -1,6 +1,9 @@
-import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
+import type {
+	IExecuteFunctions,
+	IDataObject,
+	INodePropertyOptions,
+} from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
-import { encodePathSegment } from '../contracts/requests';
 
 export const description: INodePropertyOptions = {
 	name: 'Get Monitor',
@@ -17,6 +20,6 @@ export async function execute(
 	return await parallelApiRequest(
 		executeFunctions,
 		'GET',
-		`/v1/monitors/${encodePathSegment(monitorId)}`,
+		`/v1/monitors/${encodeURIComponent(monitorId)}`,
 	);
 }

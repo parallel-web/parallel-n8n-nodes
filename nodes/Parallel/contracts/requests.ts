@@ -34,10 +34,6 @@ export function mapMonitorFrequency(value: string): string {
 	return LEGACY_MONITOR_FREQUENCIES[value] ?? value;
 }
 
-export function encodePathSegment(value: string): string {
-	return encodeURIComponent(value);
-}
-
 export function assertTaskOutputSchemaCompatibility(
 	processor: string,
 	outputSchemaType: string,

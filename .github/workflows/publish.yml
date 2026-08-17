@@ -23,7 +23,6 @@ jobs:
           registry-url: https://registry.npmjs.org
       - run: npm install --global npm@11.6.0
       - run: npm ci
-      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

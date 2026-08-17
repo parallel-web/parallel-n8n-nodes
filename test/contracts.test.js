@@ -7,7 +7,6 @@ const {
 	buildMonitorEventsQuery,
 	buildMonitorUpdateRequest,
 	buildSearchRequest,
-	encodePathSegment,
 } = require('../dist/nodes/Parallel/contracts/requests.js');
 
 test('Auto Task output is limited to supported processors', () => {
@@ -92,7 +91,7 @@ test('Monitor update can explicitly clear nullable fields', () => {
 	assert.throws(() => buildMonitorUpdateRequest({}), /at least one monitor field/);
 });
 
-test('Monitor event query uses GA cursor fields and path IDs are encoded', () => {
+test('Monitor event query uses GA cursor fields', () => {
 	assert.deepEqual(
 		buildMonitorEventsQuery({
 			eventGroupId: 'group/one',
@@ -107,5 +106,4 @@ test('Monitor event query uses GA cursor fields and path IDs are encoded', () =>
 			include_completions: true,
 		},
 	);
-	assert.equal(encodePathSegment('monitor/a b'), 'monitor%2Fa%20b');
 });

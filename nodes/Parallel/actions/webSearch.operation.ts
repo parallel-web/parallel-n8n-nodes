@@ -1,4 +1,8 @@
-import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
+import type {
+	IExecuteFunctions,
+	IDataObject,
+	INodePropertyOptions,
+} from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { buildSearchRequest } from '../contracts/requests';
 import { parallelApiRequest } from '../transport/ParallelApi';
@@ -6,8 +10,7 @@ import { parallelApiRequest } from '../transport/ParallelApi';
 export const description: INodePropertyOptions = {
 	name: 'Web Search',
 	value: 'webSearch',
-	description:
-		'Search the web with the Parallel Search API and retrieve a list of results with excerpts',
+	description: 'Search the web with the Parallel Search API and retrieve a list of results with excerpts',
 	action: 'Web Search',
 };
 
@@ -42,5 +45,6 @@ export async function execute(
 			{ itemIndex },
 		);
 	}
+
 	return await parallelApiRequest(executeFunctions, 'POST', '/v1/search', body);
 }

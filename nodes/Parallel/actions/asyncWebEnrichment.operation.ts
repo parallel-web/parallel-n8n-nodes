@@ -1,4 +1,8 @@
-import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
+import type {
+	IExecuteFunctions,
+	IDataObject,
+	INodePropertyOptions,
+} from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { assertTaskOutputSchemaCompatibility } from '../contracts/requests';
 import { parallelApiRequest } from '../transport/ParallelApi';
@@ -7,8 +11,7 @@ import { buildSourcePolicy, buildMetadata } from '../utils';
 export const description: INodePropertyOptions = {
 	name: 'Async Web Enrichment',
 	value: 'asyncWebEnrichment',
-	description:
-		'Create a Task with the Parallel Task API and retrieve its Run ID for async retrieval',
+	description: 'Create a Task with the Parallel Task API and retrieve its Run ID for async retrieval',
 	action: 'Async Web Enrichment',
 };
 
@@ -69,10 +72,7 @@ export async function execute(
 			type: 'text',
 		};
 	} else if (outputSchemaType === 'json') {
-		const jsonSchemaString = executeFunctions.getNodeParameter(
-			'asyncOutputJsonSchema',
-			itemIndex,
-		) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter('asyncOutputJsonSchema', itemIndex) as string;
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			taskSpec.output_schema = {
@@ -134,8 +134,7 @@ export async function execute(
 	if (webhookUrl) {
 		result.webhook_configured = true;
 		result.webhook_url = webhookUrl;
-		result.message =
-			'Task started successfully with webhook notifications. You will receive a webhook call when the task completes.';
+		result.message = 'Task started successfully with webhook notifications. You will receive a webhook call when the task completes.';
 	} else {
 		result.webhook_configured = false;
 	}

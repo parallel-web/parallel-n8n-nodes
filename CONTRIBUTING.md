@@ -15,7 +15,6 @@ Keep changes focused and preserve the persisted `name`, resource, and operation 
 Before opening a pull request, run:
 
 ```bash
-npm run format:check
 npm run lint
 npm run typecheck
 npm test

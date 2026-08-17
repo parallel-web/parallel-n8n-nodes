@@ -44,3 +44,29 @@ export function verifyParallelWebhook(input: VerifyWebhookInput): WebhookVerific
 	}
 	return { valid: false, reason: 'invalid-signature' };
 }
+
+export function getParallelWebhookError(input: {
+	secret?: string;
+	webhookId?: string;
+	webhookTimestamp?: string;
+	signatureHeader?: string;
+	rawBody: unknown;
+}): string | undefined {
+	if (!input.secret) return 'Webhook signature validation requires a webhook secret';
+	if (!input.webhookId || !input.webhookTimestamp || !input.signatureHeader) {
+		return 'Missing Parallel webhook headers';
+	}
+	if (!Buffer.isBuffer(input.rawBody)) {
+		return 'Raw webhook body is unavailable; signature verification cannot proceed safely';
+	}
+
+	const verification = verifyParallelWebhook({
+		secret: input.secret,
+		webhookId: input.webhookId,
+		webhookTimestamp: input.webhookTimestamp,
+		rawBody: input.rawBody,
+		signatureHeader: input.signatureHeader,
+	});
+	if (!verification.valid) return `Invalid Parallel webhook signature (${verification.reason})`;
+	return undefined;
+}

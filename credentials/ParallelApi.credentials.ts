@@ -35,8 +35,7 @@ export class ParallelApi implements ICredentialType {
 			},
 			default: '',
 			required: false,
-			description:
-				'Optional webhook secret for validating webhook signatures. Find this in Settings → Webhooks at https://platform.parallel.ai/settings',
+			description: 'Optional webhook secret for validating webhook signatures. Find this in Settings → Webhooks at https://platform.parallel.ai/settings',
 			hint: 'Webhook validation ensures secure communication. Get your secret from platform.parallel.ai/settings',
 		},
 	];

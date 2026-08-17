@@ -1,6 +1,10 @@
-import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
+import type {
+	IExecuteFunctions,
+	IDataObject,
+	INodePropertyOptions,
+} from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
-import { buildMonitorEventsQuery, encodePathSegment } from '../contracts/requests';
+import { buildMonitorEventsQuery } from '../contracts/requests';
 
 export const description: INodePropertyOptions = {
 	name: 'List Monitor Events',
@@ -14,16 +18,12 @@ export async function execute(
 	itemIndex: number,
 ): Promise<IDataObject> {
 	const monitorId = executeFunctions.getNodeParameter('monitorId', itemIndex) as string;
-	const additionalFields = executeFunctions.getNodeParameter(
-		'monitorEventsAdditionalFields',
-		itemIndex,
-		{},
-	) as IDataObject;
+	const additionalFields = executeFunctions.getNodeParameter('monitorEventsAdditionalFields', itemIndex, {}) as IDataObject;
 
 	return await parallelApiRequest(
 		executeFunctions,
 		'GET',
-		`/v1/monitors/${encodePathSegment(monitorId)}/events`,
+		`/v1/monitors/${encodeURIComponent(monitorId)}/events`,
 		undefined,
 		buildMonitorEventsQuery(additionalFields),
 	);

@@ -7,61 +7,26 @@ import type {
 	IWebhookResponseData,
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
-import { encodePathSegment } from '../Parallel/contracts/requests';
 import { parallelApiRequestForWebhook } from '../Parallel/transport/ParallelApi';
-import { verifyParallelWebhook } from '../Parallel/webhooks/verify';
+import { getParallelWebhookError } from '../Parallel/webhooks/verify';
 
 async function validateWebhook(context: IWebhookFunctions): Promise<void> {
 	if (!(context.getNodeParameter('validateSignatures') as boolean)) return;
 	const credentials = await context.getCredentials('parallelApi');
-	const secret = credentials.webhookSecret as string;
-	if (!secret) {
-		throw new NodeApiError(
-			context.getNode(),
-			{},
-			{
-				message: 'Webhook signature validation requires a webhook secret',
-				description: 'Add the secret from Parallel Platform Settings to the credential.',
-			},
-		);
-	}
 	const headers = context.getHeaderData();
-	const webhookId = headers['webhook-id'] as string | undefined;
-	const webhookTimestamp = headers['webhook-timestamp'] as string | undefined;
-	const signatureHeader = headers['webhook-signature'] as string | undefined;
-	if (!webhookId || !webhookTimestamp || !signatureHeader) {
-		throw new NodeApiError(context.getNode(), {}, { message: 'Missing Parallel webhook headers' });
-	}
-	const rawBody = context.getRequestObject().rawBody;
-	if (!Buffer.isBuffer(rawBody)) {
-		throw new NodeApiError(
-			context.getNode(),
-			{},
-			{
-				message: 'Raw webhook body is unavailable; signature verification cannot proceed safely',
-			},
-		);
-	}
-	const verification = verifyParallelWebhook({
-		secret,
-		webhookId,
-		webhookTimestamp,
-		rawBody,
-		signatureHeader,
+	const message = getParallelWebhookError({
+		secret: credentials.webhookSecret as string | undefined,
+		webhookId: headers['webhook-id'] as string | undefined,
+		webhookTimestamp: headers['webhook-timestamp'] as string | undefined,
+		signatureHeader: headers['webhook-signature'] as string | undefined,
+		rawBody: context.getRequestObject().rawBody,
 	});
-	if (!verification.valid) {
-		throw new NodeApiError(
-			context.getNode(),
-			{},
-			{
-				message: `Invalid Parallel webhook signature (${verification.reason})`,
-			},
-		);
+	if (message) {
+		throw new NodeApiError(context.getNode(), {}, { message });
 	}
 }
 
 export class ParallelTrigger implements INodeType {
-	// Parallel receives this URL in the Task creation request, so activation has no remote registration.
 	webhookMethods = {
 		default: {
 			async checkExists(this: IHookFunctions): Promise<boolean> {
@@ -83,11 +48,18 @@ export class ParallelTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["onlyCompleted"] ? "Completed" : "All terminal states"}}',
-		description: 'Triggers when a Parallel Task Run reaches a terminal state',
-		defaults: { name: 'Parallel Task Run Completion' },
+		description: 'Triggers when a Parallel Task Run completes and fetches the full result',
+		defaults: {
+			name: 'Parallel Task Run Completion',
+		},
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
-		credentials: [{ name: 'parallelApi', required: true }],
+		credentials: [
+			{
+				name: 'parallelApi',
+				required: true,
+			},
+		],
 		webhooks: [
 			{
 				name: 'default',
@@ -102,14 +74,14 @@ export class ParallelTrigger implements INodeType {
 				name: 'webhookUrl',
 				type: 'notice',
 				default: '',
-				description: 'Use this n8n webhook URL when creating the Parallel Task Run',
+				description: 'Use the webhook URL that n8n provides for this trigger node when configuring your Parallel task webhook',
 			},
 			{
-				displayName: 'Include Webhook Data',
-				name: 'includeWebhookData',
+				displayName: 'Validate Webhook Signatures',
+				name: 'validateSignatures',
 				type: 'boolean',
-				default: false,
-				description: 'Whether to include the complete webhook payload in the output',
+				default: true,
+				description: 'Whether to validate the exact request body using the configured webhook secret',
 			},
 			{
 				displayName: 'Only Trigger on Successful Tasks',
@@ -119,12 +91,11 @@ export class ParallelTrigger implements INodeType {
 				description: 'Whether to ignore failed Task Runs',
 			},
 			{
-				displayName: 'Validate Webhook Signatures',
-				name: 'validateSignatures',
+				displayName: 'Include Webhook Data',
+				name: 'includeWebhookData',
 				type: 'boolean',
-				default: true,
-				description:
-					'Whether to validate the exact request body using the configured webhook secret',
+				default: false,
+				description: 'Whether to include the complete webhook payload in the output',
 			},
 		],
 		usableAsTool: true,
@@ -151,10 +122,12 @@ export class ParallelTrigger implements INodeType {
 			output.result = await parallelApiRequestForWebhook(
 				this,
 				'GET',
-				`/v1/tasks/runs/${encodePathSegment(String(data.run_id))}/result`,
+				`/v1/tasks/runs/${encodeURIComponent(String(data.run_id))}/result`,
 			);
 		}
-		if (this.getNodeParameter('includeWebhookData') as boolean) output.webhook_data = payload;
+		if (this.getNodeParameter('includeWebhookData') as boolean) {
+			output.webhook_data = payload;
+		}
 		return { workflowData: [this.helpers.returnJsonArray([output])] };
 	}
 }
