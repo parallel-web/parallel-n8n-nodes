@@ -39,7 +39,7 @@ Compatibility and release boundaries: Existing `0.2.0` saved node parameters are
 - [x] (2026-08-17) Milestone 3: Migrate Search and Monitor to GA contracts.
 - [x] (2026-08-17) Milestone 4: Complete Task/Chat and n8n execution semantics.
 - [x] (2026-08-17) Milestone 5: Modernize toolchain, documentation, CI, and publishing configuration.
-- [ ] Milestone 6: Run final gates, one Parallel review, commit, push, and open draft PR.
+- [x] (2026-08-17) Milestone 6: Run final gates, one Parallel review invocation, commit, push, and open draft PR #14.
 
 ## Surprises & Discoveries
 
@@ -91,7 +91,9 @@ Milestones 1-5 are implemented. The package now has a real entry point, strict n
 
 Local validation passed on Node 24.18/npm 11.16 and the declared lower boundary Node 22.22/npm 11.6. The package check validated an 80-file `0.3.0` tarball. Production audit is clean; 19 development-only advisories remain in the current n8n CLI/workflow graph and cannot be removed by the non-breaking fixes npm proposes. API behavior is validated against current official schemas/docs and local fixtures, not an authenticated live Parallel API run.
 
-Milestone 6 remains partially complete. The final diff was frozen and the single authorized `autoreview-parallel` invocation ran. Its secret scan was clean, but code analysis failed on an empty 36-byte branch bundle and produced no findings; it will not be rerun. The local validation evidence therefore remains the substantive correctness gate. Commit, push, and draft PR creation remain.
+Milestone 6 is complete. The final diff was frozen and the single authorized `autoreview-parallel` invocation ran. Its secret scan was clean, but code analysis failed on an empty 36-byte branch bundle and produced no findings; it was not rerun. The local validation evidence therefore remains the substantive correctness gate. Implementation commit `98b3d70` was pushed to `agent/modernize-parallel-n8n-node`, and draft PR [#14](https://github.com/parallel-web/parallel-n8n-nodes/pull/14) is open against `main`.
+
+No npm publication, release, tag, deployment, merge, or GitHub comment was created. The remaining external validation gap is an authenticated live Parallel API/model run; this PR's API claims remain official-schema/documentation plus fixture validated.
 
 ## Context and Orientation
 
