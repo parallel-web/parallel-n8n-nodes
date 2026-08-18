@@ -1,11 +1,13 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { getErrorStatusCode, parallelApiRequest } from '../transport/ParallelApi';
-import { buildSourcePolicy, buildMetadata, wait, calculateBackoffDelay, isRetryableError } from '../utils';
+import {
+	buildSourcePolicy,
+	buildMetadata,
+	wait,
+	calculateBackoffDelay,
+	isRetryableError,
+} from '../utils';
 
 export const description: INodePropertyOptions = {
 	name: 'Sync Web Enrichment',
@@ -61,7 +63,10 @@ export async function execute(
 			type: 'text',
 		};
 	} else if (outputSchemaType === 'json') {
-		const jsonSchemaString = executeFunctions.getNodeParameter('syncOutputJsonSchema', itemIndex) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter(
+			'syncOutputJsonSchema',
+			itemIndex,
+		) as string;
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			taskSpec.output_schema = {
@@ -82,10 +87,17 @@ export async function execute(
 		let textDescription = '';
 		if (inputType === 'json') {
 			// Required description when input is JSON
-			textDescription = executeFunctions.getNodeParameter('textOutputDescriptionRequired', itemIndex) as string;
+			textDescription = executeFunctions.getNodeParameter(
+				'textOutputDescriptionRequired',
+				itemIndex,
+			) as string;
 		} else {
 			// Optional description when input is text
-			const optionalDescription = executeFunctions.getNodeParameter('textOutputDescription', itemIndex, '') as string;
+			const optionalDescription = executeFunctions.getNodeParameter(
+				'textOutputDescription',
+				itemIndex,
+				'',
+			) as string;
 			if (optionalDescription) {
 				textDescription = optionalDescription;
 			}
@@ -93,7 +105,11 @@ export async function execute(
 
 		// If we have a text description, modify the task spec to include it
 		if (textDescription) {
-			if (taskSpec.output_schema && typeof taskSpec.output_schema === 'object' && (taskSpec.output_schema as IDataObject).type === 'text') {
+			if (
+				taskSpec.output_schema &&
+				typeof taskSpec.output_schema === 'object' &&
+				(taskSpec.output_schema as IDataObject).type === 'text'
+			) {
 				// Add description to existing text schema
 				(taskSpec.output_schema as IDataObject).description = textDescription;
 			} else {

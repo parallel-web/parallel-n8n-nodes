@@ -1,8 +1,4 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
 
 export const description: INodePropertyOptions = {

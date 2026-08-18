@@ -1,8 +1,4 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { parallelApiRequest } from '../transport/ParallelApi';
 
 export const description: INodePropertyOptions = {
@@ -16,7 +12,11 @@ export async function execute(
 	executeFunctions: IExecuteFunctions,
 	itemIndex: number,
 ): Promise<IDataObject> {
-	const additionalFields = executeFunctions.getNodeParameter('listMonitorsAdditionalFields', itemIndex, {}) as IDataObject;
+	const additionalFields = executeFunctions.getNodeParameter(
+		'listMonitorsAdditionalFields',
+		itemIndex,
+		{},
+	) as IDataObject;
 
 	const query: IDataObject = {};
 	if (additionalFields.limit) {

@@ -37,7 +37,8 @@ export class Parallel implements INodeType {
 		icon: { light: 'file:parallel.svg', dark: 'file:parallel.dark.svg' },
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["resource"] === "monitor" ? "Monitor / " + $parameter["monitorOperation"] : $parameter["operation"]}}',
+		subtitle:
+			'={{$parameter["resource"] === "monitor" ? "Monitor / " + $parameter["monitorOperation"] : $parameter["operation"]}}',
 		description: 'Highest accuracy web search tools for AI agents',
 		defaults: {
 			name: 'Parallel',
@@ -153,8 +154,10 @@ export class Parallel implements INodeType {
 						inputType: ['json'],
 					},
 				},
-				default: '{\n  "company_name": "Apple Inc.",\n  "company_domain": "apple.com",\n  "company_ticker": "AAPL"\n}',
-				description: 'System will expect inputs of this JSON structure. Provide actual data values here.',
+				default:
+					'{\n  "company_name": "Apple Inc.",\n  "company_domain": "apple.com",\n  "company_ticker": "AAPL"\n}',
+				description:
+					'System will expect inputs of this JSON structure. Provide actual data values here.',
 			},
 			{
 				displayName: 'Output Schema Type',
@@ -206,7 +209,8 @@ export class Parallel implements INodeType {
 					{
 						name: 'Auto',
 						value: 'auto',
-						description: 'Only supported in Pro and above. Optimized JSON output with nested citations.',
+						description:
+							'Only supported in Pro and above. Optimized JSON output with nested citations.',
 					},
 				],
 				default: 'text',
@@ -224,7 +228,8 @@ export class Parallel implements INodeType {
 					},
 				},
 				default: '',
-				placeholder: 'Optional: Describe the desired output (e.g., "Format as $X.X trillion (year)")',
+				placeholder:
+					'Optional: Describe the desired output (e.g., "Format as $X.X trillion (year)")',
 				description: 'Optional description of how you want the text output formatted',
 			},
 			{
@@ -241,7 +246,8 @@ export class Parallel implements INodeType {
 					},
 				},
 				default: '',
-				placeholder: 'Required: Describe what text output you want from the JSON input (e.g., "Generate a company summary")',
+				placeholder:
+					'Required: Describe what text output you want from the JSON input (e.g., "Generate a company summary")',
 				description: 'Required description of what text output you want when providing JSON input',
 			},
 			{
@@ -261,7 +267,8 @@ export class Parallel implements INodeType {
 				},
 				default:
 					'{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Official company name from recent filings or website."\n    },\n    "ceo_name": {\n      "type": "string",\n      "description": "Current CEO full name from company website or recent news."\n    },\n    "employee_count": {\n      "type": "string",\n      "description": "Current number of employees as approximate number or range (e.g., \'500-1000\', \'2500\')."\n    },\n    "annual_revenue_2024": {\n      "type": "string",\n      "description": "2024 annual revenue in millions USD format (e.g., \'$500M\', \'$2.5B\')."\n    },\n    "headquarters_city": {\n      "type": "string",\n      "description": "Primary headquarters city and country (e.g., \'San Francisco, USA\')."\n    },\n    "founded_year": {\n      "type": "string",\n      "description": "Year company was founded in YYYY format."\n    }\n  },\n  "required": ["company_name", "ceo_name", "employee_count", "annual_revenue_2024", "headquarters_city", "founded_year"],\n  "additionalProperties": false\n}',
-				description: 'JSON schema defining the structure of the expected output (description fields serve as field-level prompts)',
+				description:
+					'JSON schema defining the structure of the expected output (description fields serve as field-level prompts)',
 			},
 			{
 				displayName: 'JSON Schema',
@@ -280,7 +287,8 @@ export class Parallel implements INodeType {
 				},
 				default:
 					'{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Official company name from recent filings or website."\n    },\n    "ceo_name": {\n      "type": "string",\n      "description": "Current CEO full name from company website or recent news."\n    },\n    "employee_count": {\n      "type": "string",\n      "description": "Current number of employees as approximate number or range (e.g., \'500-1000\', \'2500\')."\n    },\n    "annual_revenue_2024": {\n      "type": "string",\n      "description": "2024 annual revenue in millions USD format (e.g., \'$500M\', \'$2.5B\')."\n    },\n    "headquarters_city": {\n      "type": "string",\n      "description": "Primary headquarters city and country (e.g., \'San Francisco, USA\')."\n    },\n    "founded_year": {\n      "type": "string",\n      "description": "Year company was founded in YYYY format."\n    }\n  },\n  "required": ["company_name", "ceo_name", "employee_count", "annual_revenue_2024", "headquarters_city", "founded_year"],\n  "additionalProperties": false\n}',
-				description: 'JSON schema defining the structure of the expected output (required when JSON type is selected)',
+				description:
+					'JSON schema defining the structure of the expected output (required when JSON type is selected)',
 			},
 			{
 				displayName: 'Processor',
@@ -300,7 +308,8 @@ export class Parallel implements INodeType {
 				displayName: 'Processor',
 				name: 'asyncProcessor',
 				type: 'options',
-				description: 'Processor used for the async task. Higher-end processors for longer-running tasks.',
+				description:
+					'Processor used for the async task. Higher-end processors for longer-running tasks.',
 				displayOptions: {
 					show: {
 						resource: ['task'],
@@ -322,7 +331,8 @@ export class Parallel implements INodeType {
 				},
 				default: '',
 				placeholder: 'https://your-domain.com/webhooks/parallel',
-				description: 'Optional webhook URL to receive real-time notifications when the task completes',
+				description:
+					'Optional webhook URL to receive real-time notifications when the task completes',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -591,30 +601,38 @@ export class Parallel implements INodeType {
 						chatResponseFormat: ['json'],
 					},
 				},
-				default: JSON.stringify({
-					type: 'object',
-					properties: {
-						answer: {
-							type: 'string',
-							description: 'Direct factual answer to the user question based on web research. If unavailable, return \'Information not found\'.',
+				default: JSON.stringify(
+					{
+						type: 'object',
+						properties: {
+							answer: {
+								type: 'string',
+								description:
+									"Direct factual answer to the user question based on web research. If unavailable, return 'Information not found'.",
+							},
+							key_findings: {
+								type: 'array',
+								items: { type: 'string' },
+								description:
+									'List of 3-5 most important facts or insights related to the question. Return empty array if no findings.',
+							},
+							confidence_level: {
+								type: 'string',
+								description:
+									"Confidence level of the answer as 'High', 'Medium', or 'Low' based on source quality and consistency.",
+							},
+							last_updated_date: {
+								type: 'string',
+								description:
+									"Most recent date of information found in YYYY-MM-DD format. If unavailable, return 'Unknown'.",
+							},
 						},
-						key_findings: {
-							type: 'array',
-							items: { type: 'string' },
-							description: 'List of 3-5 most important facts or insights related to the question. Return empty array if no findings.',
-						},
-						confidence_level: {
-							type: 'string',
-							description: 'Confidence level of the answer as \'High\', \'Medium\', or \'Low\' based on source quality and consistency.',
-						},
-						last_updated_date: {
-							type: 'string',
-							description: 'Most recent date of information found in YYYY-MM-DD format. If unavailable, return \'Unknown\'.',
-						},
+						required: ['answer', 'key_findings', 'confidence_level', 'last_updated_date'],
+						additionalProperties: false,
 					},
-					required: ['answer', 'key_findings', 'confidence_level', 'last_updated_date'],
-					additionalProperties: false,
-				}, null, 2),
+					null,
+					2,
+				),
 				description: 'JSON schema defining the structure of the expected response',
 			},
 			{
@@ -639,7 +657,7 @@ export class Parallel implements INodeType {
 						},
 						default: '',
 						placeholder: 'You are a helpful assistant that provides accurate information...',
-						description: 'Optional system prompt to define the AI\'s behavior and role',
+						description: "Optional system prompt to define the AI's behavior and role",
 					},
 				],
 			},
@@ -677,7 +695,8 @@ export class Parallel implements INodeType {
 				},
 				default: '',
 				placeholder: 'Track funding announcements for AI startups',
-				description: 'What to monitor - natural language description of the events to track on the web',
+				description:
+					'What to monitor - natural language description of the events to track on the web',
 			},
 			{
 				displayName: 'Task Run ID',
@@ -782,7 +801,8 @@ export class Parallel implements INodeType {
 						monitorOutputSchemaType: ['json'],
 					},
 				},
-				default: '{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Company name"\n    },\n    "event_summary": {\n      "type": "string",\n      "description": "Brief summary of the event"\n    },\n    "sentiment": {\n      "type": "string",\n      "description": "Sentiment: positive, negative, or neutral"\n    }\n  }\n}',
+				default:
+					'{\n  "type": "object",\n  "properties": {\n    "company_name": {\n      "type": "string",\n      "description": "Company name"\n    },\n    "event_summary": {\n      "type": "string",\n      "description": "Brief summary of the event"\n    },\n    "sentiment": {\n      "type": "string",\n      "description": "Sentiment: positive, negative, or neutral"\n    }\n  }\n}',
 				description: 'JSON schema defining the structure of monitor event outputs',
 			},
 			{
@@ -797,7 +817,8 @@ export class Parallel implements INodeType {
 				},
 				default: '',
 				placeholder: 'https://your-n8n-instance.com/webhook/parallel-monitor-event',
-				description: 'Webhook URL to receive notifications when events are detected. Use the URL from a Parallel Monitor Event Trigger node.',
+				description:
+					'Webhook URL to receive notifications when events are detected. Use the URL from a Parallel Monitor Event Trigger node.',
 			},
 			{
 				displayName: 'Webhook Event Types',
@@ -888,7 +909,14 @@ export class Parallel implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['monitor'],
-						monitorOperation: ['getMonitor', 'updateMonitor', 'deleteMonitor', 'listMonitorEvents', 'getMonitorEventGroup', 'triggerMonitor'],
+						monitorOperation: [
+							'getMonitor',
+							'updateMonitor',
+							'deleteMonitor',
+							'listMonitorEvents',
+							'getMonitorEventGroup',
+							'triggerMonitor',
+						],
 					},
 				},
 				default: '',
@@ -1171,9 +1199,13 @@ export class Parallel implements INodeType {
 							result = await operations.triggerMonitor.execute(this, i);
 							break;
 						default:
-							throw new NodeOperationError(this.getNode(), `Unknown monitor operation: ${monitorOperation}`, {
-								itemIndex: i,
-							});
+							throw new NodeOperationError(
+								this.getNode(),
+								`Unknown monitor operation: ${monitorOperation}`,
+								{
+									itemIndex: i,
+								},
+							);
 					}
 				} else {
 					const operation = this.getNodeParameter('operation', i) as string;

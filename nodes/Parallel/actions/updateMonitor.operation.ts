@@ -1,8 +1,4 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { buildMonitorUpdateRequest } from '../contracts/requests';
 import { parallelApiRequest } from '../transport/ParallelApi';
@@ -11,7 +7,7 @@ import { buildMetadata } from '../utils';
 export const description: INodePropertyOptions = {
 	name: 'Update Monitor',
 	value: 'updateMonitor',
-	description: 'Update an existing monitor\'s query, cadence, webhook, or metadata',
+	description: "Update an existing monitor's query, cadence, webhook, or metadata",
 	action: 'Update a monitor',
 };
 
@@ -20,7 +16,11 @@ export async function execute(
 	itemIndex: number,
 ): Promise<IDataObject> {
 	const monitorId = executeFunctions.getNodeParameter('monitorId', itemIndex) as string;
-	const updateFields = executeFunctions.getNodeParameter('monitorUpdateFields', itemIndex, {}) as IDataObject;
+	const updateFields = executeFunctions.getNodeParameter(
+		'monitorUpdateFields',
+		itemIndex,
+		{},
+	) as IDataObject;
 
 	const metadata = buildMetadata(updateFields);
 	let body: IDataObject;

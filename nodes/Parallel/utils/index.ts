@@ -61,7 +61,11 @@ export function wait(ms: number): Promise<void> {
 /**
  * Calculates exponential backoff delay with jitter
  */
-export function calculateBackoffDelay(attempt: number, baseDelay: number = 2000, maxDelay: number = 60000): number {
+export function calculateBackoffDelay(
+	attempt: number,
+	baseDelay: number = 2000,
+	maxDelay: number = 60000,
+): number {
 	// Calculate exponential backoff delay (base 2 seconds, max 60 seconds)
 	const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
 
