@@ -3,4 +3,5 @@ node_modules
 .tmp
 tmp
 dist
+.cache
 npm-debug.log*

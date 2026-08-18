@@ -2,17 +2,39 @@ import type {
 	IExecuteFunctions,
 	IDataObject,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { operations, operationDescriptions, monitorOperationDescriptions } from './actions';
+
+const TASK_PROCESSOR_OPTIONS: INodePropertyOptions[] = [
+	{ name: 'Base', value: 'base' },
+	{ name: 'Base (Fast)', value: 'base-fast' },
+	{ name: 'Core', value: 'core' },
+	{ name: 'Core 2x', value: 'core2x' },
+	{ name: 'Core 2x (Fast)', value: 'core2x-fast' },
+	{ name: 'Core (Fast)', value: 'core-fast' },
+	{ name: 'Lite', value: 'lite' },
+	{ name: 'Lite (Fast)', value: 'lite-fast' },
+	{ name: 'Pro', value: 'pro' },
+	{ name: 'Pro (Fast)', value: 'pro-fast' },
+	{ name: 'Ultra', value: 'ultra' },
+	{ name: 'Ultra 2x', value: 'ultra2x' },
+	{ name: 'Ultra 2x (Fast)', value: 'ultra2x-fast' },
+	{ name: 'Ultra 4x', value: 'ultra4x' },
+	{ name: 'Ultra 4x (Fast)', value: 'ultra4x-fast' },
+	{ name: 'Ultra 8x', value: 'ultra8x' },
+	{ name: 'Ultra 8x (Fast)', value: 'ultra8x-fast' },
+	{ name: 'Ultra (Fast)', value: 'ultra-fast' },
+];
 
 export class Parallel implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Parallel',
 		name: 'parallel',
-		icon: 'file:parallel.svg',
+		icon: { light: 'file:parallel.svg', dark: 'file:parallel.dark.svg' },
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["resource"] === "monitor" ? "Monitor / " + $parameter["monitorOperation"] : $parameter["operation"]}}',
@@ -20,8 +42,8 @@ export class Parallel implements INodeType {
 		defaults: {
 			name: 'Parallel',
 		},
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'parallelApi',
@@ -184,7 +206,7 @@ export class Parallel implements INodeType {
 					{
 						name: 'Auto',
 						value: 'auto',
-						description: 'Only supported in Pro and above. Optimized JSON output with nested citations',
+						description: 'Only supported in Pro and above. Optimized JSON output with nested citations.',
 					},
 				],
 				default: 'text',
@@ -193,7 +215,6 @@ export class Parallel implements INodeType {
 				displayName: 'Output Format Description',
 				name: 'textOutputDescription',
 				type: 'string',
-				required: false,
 				displayOptions: {
 					show: {
 						resource: ['task'],
@@ -265,31 +286,14 @@ export class Parallel implements INodeType {
 				displayName: 'Processor',
 				name: 'processor',
 				type: 'options',
-				description: 'Processor used for the task.',
+				description: 'Processor used for the task',
 				displayOptions: {
 					show: {
 						resource: ['task'],
 						operation: ['webEnrichment'],
 					},
 				},
-				options: [
-					{
-						name: 'Lite',
-						value: 'lite',
-						description: 'Basic metadata, fallback, low latency - 5s-60s - max 2 output fields - $5/1000 runs',
-					},
-					{
-						name: 'Base',
-						value: 'base',
-						description: 'Reliable standard enrichments - 15s-100s - max 5 output fields - $10/1000 runs',
-					},
-					{
-						name: 'Core',
-						value: 'core',
-						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
-					},
-
-				],
+				options: TASK_PROCESSOR_OPTIONS,
 				default: 'base',
 			},
 			{
@@ -303,55 +307,13 @@ export class Parallel implements INodeType {
 						operation: ['asyncWebEnrichment'],
 					},
 				},
-				options: [
-					{
-						name: 'Lite',
-						value: 'lite',
-						description: 'Basic metadata, fallback, low latency - 5s-60s - max 2 output fields - $5/1000 runs',
-					},
-					{
-						name: 'Base',
-						value: 'base',
-						description: 'Reliable standard enrichments - 15s-100s - max 5 output fields - $10/1000 runs',
-					},
-					{
-						name: 'Core',
-						value: 'core',
-						description: 'Cross-referenced, moderately complex outputs - 60s-5min - max 10 output fields - $25/1000 runs',
-					},
-					{
-						name: 'Pro',
-						value: 'pro',
-						description: 'Exploratory web research - 3min-9min - max 20 output fields - $100/1000 runs',
-					},
-					{
-						name: 'Ultra',
-						value: 'ultra',
-						description: 'Advanced multi-source deep research - 5min-25min - max 20 output fields - $300/1000 runs',
-					},
-					{
-						name: 'Ultra 2x',
-						value: 'ultra2x',
-						description: 'Difficult deep research - 5min-25min - max 25 output fields - $600/1000 runs',
-					},
-					{
-						name: 'Ultra 4x',
-						value: 'ultra4x',
-						description: 'Very difficult deep research - 8min-30min - max 25 output fields - $1200/1000 runs',
-					},
-					{
-						name: 'Ultra 8x',
-						value: 'ultra8x',
-						description: 'The most difficult deep research - 8min-30min - max 25 output fields - $2400/1000 runs',
-					},
-				],
+				options: TASK_PROCESSOR_OPTIONS,
 				default: 'pro',
 			},
 			{
 				displayName: 'Webhook URL',
 				name: 'webhookUrl',
 				type: 'string',
-				required: false,
 				displayOptions: {
 					show: {
 						resource: ['task'],
@@ -428,7 +390,6 @@ export class Parallel implements INodeType {
 				displayName: 'Objective',
 				name: 'objective',
 				type: 'string',
-				required: false,
 				displayOptions: {
 					show: {
 						resource: ['task'],
@@ -451,17 +412,27 @@ export class Parallel implements INodeType {
 				},
 				options: [
 					{
-						name: 'Base',
-						value: 'base',
-						description: 'Standard search processing',
+						name: 'Advanced',
+						value: 'advanced',
+						description: 'Highest-quality agentic search',
 					},
 					{
-						name: 'Pro',
-						value: 'pro',
-						description: 'Advanced search processing',
+						name: 'Basic',
+						value: 'basic',
+						description: 'Balanced search for most workflows',
+					},
+					{
+						name: 'Fast',
+						value: 'fast',
+						description: 'Low-latency search',
+					},
+					{
+						name: 'Turbo',
+						value: 'turbo',
+						description: 'Fastest search for English and Japanese queries',
 					},
 				],
-				default: 'base',
+				default: 'advanced',
 			},
 			{
 				displayName: 'Additional Fields',
@@ -477,14 +448,6 @@ export class Parallel implements INodeType {
 				default: {},
 				options: [
 					{
-						displayName: 'Include Domains',
-						name: 'includeDomains',
-						type: 'string',
-						default: '',
-						placeholder: 'wikipedia.org,reuters.com',
-						description: 'Comma-separated list of domains to include in search results',
-					},
-					{
 						displayName: 'Exclude Domains',
 						name: 'excludeDomains',
 						type: 'string',
@@ -492,17 +455,13 @@ export class Parallel implements INodeType {
 						placeholder: 'reddit.com,x.com',
 						description: 'Comma-separated list of domains to exclude from search results',
 					},
-
 					{
-						displayName: 'Max Results',
-						name: 'maxResults',
-						type: 'number',
-						typeOptions: {
-							minValue: 1,
-							maxValue: 50,
-						},
-						default: 10,
-						description: 'Maximum number of search results to return',
+						displayName: 'Include Domains',
+						name: 'includeDomains',
+						type: 'string',
+						default: '',
+						placeholder: 'wikipedia.org,reuters.com',
+						description: 'Comma-separated list of domains to include in search results',
 					},
 					{
 						displayName: 'Max Characters Per Result',
@@ -515,7 +474,28 @@ export class Parallel implements INodeType {
 						default: 1000,
 						description: 'Maximum number of characters to include in excerpts for each result',
 					},
-
+					{
+						displayName: 'Max Characters Total',
+						name: 'maxCharsTotal',
+						type: 'number',
+						typeOptions: {
+							minValue: 1000,
+							maxValue: 1000000,
+						},
+						default: 50000,
+						description: 'Maximum characters across all result excerpts',
+					},
+					{
+						displayName: 'Max Results',
+						name: 'maxResults',
+						type: 'number',
+						typeOptions: {
+							minValue: 1,
+							maxValue: 100,
+						},
+						default: 10,
+						description: 'Maximum number of search results to return',
+					},
 					{
 						displayName: 'Search Queries',
 						name: 'searchQueries',
@@ -527,6 +507,20 @@ export class Parallel implements INodeType {
 				],
 			},
 			// WEB CHAT FIELDS
+			{
+				displayName: 'Model',
+				name: 'chatModel',
+				type: 'options',
+				displayOptions: { show: { resource: ['task'], operation: ['webChat'] } },
+				options: [
+					{ name: 'Base', value: 'base' },
+					{ name: 'Core', value: 'core' },
+					{ name: 'Lite', value: 'lite' },
+					{ name: 'Speed', value: 'speed' },
+				],
+				default: 'speed',
+				description: 'Parallel Chat model to use',
+			},
 			{
 				displayName: 'Input Prompt',
 				name: 'chatInputPrompt',
@@ -654,6 +648,19 @@ export class Parallel implements INodeType {
 
 			// Create Monitor fields
 			{
+				displayName: 'Monitor Type',
+				name: 'monitorType',
+				type: 'options',
+				required: true,
+				displayOptions: { show: { resource: ['monitor'], monitorOperation: ['createMonitor'] } },
+				options: [
+					{ name: 'Event Stream', value: 'event_stream' },
+					{ name: 'Snapshot', value: 'snapshot' },
+				],
+				default: 'event_stream',
+				description: 'Whether to monitor a query or changes to an existing Task Run output',
+			},
+			{
 				displayName: 'Query',
 				name: 'monitorQuery',
 				type: 'string',
@@ -665,11 +672,27 @@ export class Parallel implements INodeType {
 					show: {
 						resource: ['monitor'],
 						monitorOperation: ['createMonitor'],
+						monitorType: ['event_stream'],
 					},
 				},
 				default: '',
 				placeholder: 'Track funding announcements for AI startups',
 				description: 'What to monitor - natural language description of the events to track on the web',
+			},
+			{
+				displayName: 'Task Run ID',
+				name: 'monitorTaskRunId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['monitor'],
+						monitorOperation: ['createMonitor'],
+						monitorType: ['snapshot'],
+					},
+				},
+				default: '',
+				description: 'Completed Task Run whose output should be monitored for changes',
 			},
 			{
 				displayName: 'Cadence',
@@ -684,27 +707,39 @@ export class Parallel implements INodeType {
 				},
 				options: [
 					{
-						name: 'Hourly',
-						value: 'hourly',
-						description: 'Run every hour - best for fast-moving topics',
-					},
-					{
 						name: 'Daily',
-						value: 'daily',
+						value: '1d',
 						description: 'Run once per day - best for most news tracking',
 					},
 					{
-						name: 'Weekly',
-						value: 'weekly',
-						description: 'Run once per week - best for slower-changing topics',
-					},
-					{
 						name: 'Every Two Weeks',
-						value: 'every_two_weeks',
+						value: '2w',
 						description: 'Run every two weeks',
 					},
+					{
+						name: 'Hourly',
+						value: '1h',
+						description: 'Run every hour - best for fast-moving topics',
+					},
+					{
+						name: 'Weekly',
+						value: '1w',
+						description: 'Run once per week - best for slower-changing topics',
+					},
 				],
-				default: 'daily',
+				default: '1d',
+			},
+			{
+				displayName: 'Processor',
+				name: 'monitorProcessor',
+				type: 'options',
+				displayOptions: { show: { resource: ['monitor'], monitorOperation: ['createMonitor'] } },
+				options: [
+					{ name: 'Base', value: 'base' },
+					{ name: 'Lite', value: 'lite' },
+				],
+				default: 'lite',
+				description: 'Processor used by each monitor execution',
 			},
 			{
 				displayName: 'Output Schema Type',
@@ -714,6 +749,7 @@ export class Parallel implements INodeType {
 					show: {
 						resource: ['monitor'],
 						monitorOperation: ['createMonitor'],
+						monitorType: ['event_stream'],
 					},
 				},
 				options: [
@@ -742,6 +778,7 @@ export class Parallel implements INodeType {
 					show: {
 						resource: ['monitor'],
 						monitorOperation: ['createMonitor'],
+						monitorType: ['event_stream'],
 						monitorOutputSchemaType: ['json'],
 					},
 				},
@@ -803,6 +840,13 @@ export class Parallel implements INodeType {
 				default: {},
 				options: [
 					{
+						displayName: 'Include Backfill',
+						name: 'includeBackfill',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to emit matching historical events when the monitor is created',
+					},
+					{
 						displayName: 'Metadata',
 						name: 'metadata',
 						type: 'fixedCollection',
@@ -844,7 +888,7 @@ export class Parallel implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['monitor'],
-						monitorOperation: ['getMonitor', 'updateMonitor', 'deleteMonitor', 'listMonitorEvents', 'getMonitorEventGroup'],
+						monitorOperation: ['getMonitor', 'updateMonitor', 'deleteMonitor', 'listMonitorEvents', 'getMonitorEventGroup', 'triggerMonitor'],
 					},
 				},
 				default: '',
@@ -870,19 +914,16 @@ export class Parallel implements INodeType {
 						displayName: 'Limit',
 						name: 'limit',
 						type: 'number',
-						typeOptions: {
-							minValue: 1,
-							maxValue: 10000,
-						},
-						default: 20,
-						description: 'Maximum number of monitors to return',
+						typeOptions: { minValue: 1, maxValue: 100 },
+						default: 50,
+						description: 'Max number of results to return',
 					},
 					{
 						displayName: 'Cursor Monitor ID',
 						name: 'cursorMonitorId',
 						type: 'string',
 						default: '',
-						description: 'Monitor ID to use as cursor for pagination (returns monitors after this ID)',
+						description: 'Pagination cursor returned by the previous request',
 					},
 				],
 			},
@@ -903,67 +944,43 @@ export class Parallel implements INodeType {
 				default: {},
 				options: [
 					{
-						displayName: 'Query',
-						name: 'query',
-						type: 'string',
-						typeOptions: {
-							rows: 3,
-						},
-						default: '',
-						description: 'Updated monitoring query',
-					},
-					{
 						displayName: 'Cadence',
 						name: 'cadence',
 						type: 'options',
 						options: [
 							{
-								name: 'Hourly',
-								value: 'hourly',
-							},
-							{
 								name: 'Daily',
-								value: 'daily',
-							},
-							{
-								name: 'Weekly',
-								value: 'weekly',
+								value: '1d',
 							},
 							{
 								name: 'Every Two Weeks',
-								value: 'every_two_weeks',
+								value: '2w',
+							},
+							{
+								name: 'Hourly',
+								value: '1h',
+							},
+							{
+								name: 'Weekly',
+								value: '1w',
 							},
 						],
-						default: 'daily',
+						default: '1d',
 						description: 'Updated monitoring cadence',
 					},
 					{
-						displayName: 'Webhook URL',
-						name: 'webhookUrl',
-						type: 'string',
-						default: '',
-						description: 'Updated webhook URL for notifications',
+						displayName: 'Clear Metadata',
+						name: 'clearMetadata',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to remove all metadata from the monitor',
 					},
 					{
-						displayName: 'Webhook Event Types',
-						name: 'webhookEventTypes',
-						type: 'multiOptions',
-						options: [
-							{
-								name: 'Event Detected',
-								value: 'monitor.event.detected',
-							},
-							{
-								name: 'Execution Completed',
-								value: 'monitor.execution.completed',
-							},
-							{
-								name: 'Execution Failed',
-								value: 'monitor.execution.failed',
-							},
-						],
-						default: ['monitor.event.detected'],
-						description: 'Updated webhook event types',
+						displayName: 'Clear Webhook',
+						name: 'clearWebhook',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to remove the webhook configuration from the monitor',
 					},
 					{
 						displayName: 'Metadata',
@@ -995,6 +1012,44 @@ export class Parallel implements INodeType {
 						],
 						description: 'Updated metadata',
 					},
+					{
+						displayName: 'Query',
+						name: 'query',
+						type: 'string',
+						typeOptions: {
+							rows: 3,
+						},
+						default: '',
+						description: 'Updated event-stream query',
+					},
+					{
+						displayName: 'Webhook Event Types',
+						name: 'webhookEventTypes',
+						type: 'multiOptions',
+						options: [
+							{
+								name: 'Event Detected',
+								value: 'monitor.event.detected',
+							},
+							{
+								name: 'Execution Completed',
+								value: 'monitor.execution.completed',
+							},
+							{
+								name: 'Execution Failed',
+								value: 'monitor.execution.failed',
+							},
+						],
+						default: ['monitor.event.detected'],
+						description: 'Updated webhook event types',
+					},
+					{
+						displayName: 'Webhook URL',
+						name: 'webhookUrl',
+						type: 'string',
+						default: '',
+						description: 'Updated webhook URL for notifications',
+					},
 				],
 			},
 
@@ -1013,12 +1068,33 @@ export class Parallel implements INodeType {
 				default: {},
 				options: [
 					{
-						displayName: 'Lookback Period',
-						name: 'lookbackPeriod',
+						displayName: 'Cursor',
+						name: 'cursor',
 						type: 'string',
 						default: '',
-						placeholder: '7d',
-						description: 'How far back to look for events (e.g., 1h, 7d, 2w). Defaults to 10d.',
+						description: 'Pagination cursor returned by the previous request',
+					},
+					{
+						displayName: 'Event Group ID',
+						name: 'eventGroupId',
+						type: 'string',
+						default: '',
+						description: 'Only return events from this monitor execution',
+					},
+					{
+						displayName: 'Include Completions',
+						name: 'includeCompletions',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to include executions that completed without a detected change',
+					},
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						typeOptions: { minValue: 1, maxValue: 100 },
+						default: 50,
+						description: 'Max number of results to return',
 					},
 				],
 			},
@@ -1039,12 +1115,27 @@ export class Parallel implements INodeType {
 				placeholder: 'mevtgrp_b0079f70195e4258eab1e7284340f1a9ec3a8033ed236a24',
 				description: 'The ID of the event group to retrieve',
 			},
+			{
+				displayName: 'Task Run ID',
+				name: 'taskRunId',
+				type: 'string',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['task'],
+						operation: ['getTaskRun', 'getTaskRunResult'],
+					},
+				},
+				default: '',
+				description: 'The Task Run ID returned when the run was created',
+			},
 		],
+		usableAsTool: true,
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
-		const returnData: IDataObject[] = [];
+		const returnData: INodeExecutionData[] = [];
 		const resource = this.getNodeParameter('resource', 0, 'task') as string;
 
 		for (let i = 0; i < items.length; i++) {
@@ -1076,6 +1167,9 @@ export class Parallel implements INodeType {
 						case 'getMonitorEventGroup':
 							result = await operations.getMonitorEventGroup.execute(this, i);
 							break;
+						case 'triggerMonitor':
+							result = await operations.triggerMonitor.execute(this, i);
+							break;
 						default:
 							throw new NodeOperationError(this.getNode(), `Unknown monitor operation: ${monitorOperation}`, {
 								itemIndex: i,
@@ -1097,6 +1191,12 @@ export class Parallel implements INodeType {
 						case 'webChat':
 							result = await operations.webChat.execute(this, i);
 							break;
+						case 'getTaskRun':
+							result = await operations.getTaskRun.execute(this, i);
+							break;
+						case 'getTaskRunResult':
+							result = await operations.getTaskRunResult.execute(this, i);
+							break;
 						default:
 							throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`, {
 								itemIndex: i,
@@ -1104,28 +1204,25 @@ export class Parallel implements INodeType {
 					}
 				}
 
-				returnData.push(result);
-			} catch (error: any) {
+				returnData.push({ json: result, pairedItem: { item: i } });
+			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({
-						json: {},
-						error: error.message,
+						json: {
+							error: error instanceof Error ? error.message : String(error),
+						},
 						pairedItem: { item: i },
 					});
 				} else {
-					// If it's already a proper n8n error (NodeApiError), just re-throw it
-					// Otherwise, wrap it in NodeOperationError
-					if (error.name === 'NodeApiError' || error.name === 'NodeOperationError') {
-						throw error;
-					} else {
-						throw new NodeOperationError(this.getNode(), error as Error, {
-							itemIndex: i,
-						});
-					}
+					throw new NodeOperationError(
+						this.getNode(),
+						error instanceof Error ? error : String(error),
+						{ itemIndex: i },
+					);
 				}
 			}
 		}
 
-		return [this.helpers.returnJsonArray(returnData)];
+		return [returnData];
 	}
 }

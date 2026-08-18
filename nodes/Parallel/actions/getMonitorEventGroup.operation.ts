@@ -8,7 +8,7 @@ import { parallelApiRequest } from '../transport/ParallelApi';
 export const description: INodePropertyOptions = {
 	name: 'Get Event Group',
 	value: 'getMonitorEventGroup',
-	description: 'Retrieve full details of a specific event group from a monitor.',
+	description: 'Retrieve full details of a specific event group from a monitor',
 	action: 'Get event group',
 };
 
@@ -22,6 +22,8 @@ export async function execute(
 	return await parallelApiRequest(
 		executeFunctions,
 		'GET',
-		`/v1alpha/monitors/${monitorId}/event_groups/${eventGroupId}`,
+		`/v1/monitors/${encodeURIComponent(monitorId)}/events`,
+		undefined,
+		{ event_group_id: eventGroupId },
 	);
 }

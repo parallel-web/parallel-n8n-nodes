@@ -6,20 +6,20 @@ import type {
 import { parallelApiRequest } from '../transport/ParallelApi';
 
 export const description: INodePropertyOptions = {
-	name: 'Get Monitor',
-	value: 'getMonitor',
-	description: 'Retrieve details of a specific monitor by ID',
-	action: 'Get a monitor',
+	name: 'Get Task Run',
+	value: 'getTaskRun',
+	description: 'Retrieve the current state of a Task Run',
+	action: 'Get a task run',
 };
 
 export async function execute(
 	executeFunctions: IExecuteFunctions,
 	itemIndex: number,
 ): Promise<IDataObject> {
-	const monitorId = executeFunctions.getNodeParameter('monitorId', itemIndex) as string;
+	const runId = executeFunctions.getNodeParameter('taskRunId', itemIndex) as string;
 	return await parallelApiRequest(
 		executeFunctions,
 		'GET',
-		`/v1/monitors/${encodeURIComponent(monitorId)}`,
+		`/v1/tasks/runs/${encodeURIComponent(runId)}`,
 	);
 }

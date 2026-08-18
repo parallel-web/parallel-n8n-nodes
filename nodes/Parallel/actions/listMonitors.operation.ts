@@ -8,7 +8,7 @@ import { parallelApiRequest } from '../transport/ParallelApi';
 export const description: INodePropertyOptions = {
 	name: 'List Monitors',
 	value: 'listMonitors',
-	description: 'List all monitors with optional pagination.',
+	description: 'List all monitors with optional pagination',
 	action: 'List monitors',
 };
 
@@ -18,25 +18,13 @@ export async function execute(
 ): Promise<IDataObject> {
 	const additionalFields = executeFunctions.getNodeParameter('listMonitorsAdditionalFields', itemIndex, {}) as IDataObject;
 
-	let endpoint = '/v1alpha/monitors';
-	const queryParams: string[] = [];
-
+	const query: IDataObject = {};
 	if (additionalFields.limit) {
-		queryParams.push(`limit=${additionalFields.limit}`);
+		query.limit = additionalFields.limit;
 	}
 	if (additionalFields.cursorMonitorId) {
-		queryParams.push(`monitor_id=${additionalFields.cursorMonitorId}`);
+		query.cursor = additionalFields.cursorMonitorId;
 	}
 
-	if (queryParams.length > 0) {
-		endpoint += `?${queryParams.join('&')}`;
-	}
-
-	const result = await parallelApiRequest(executeFunctions, 'GET', endpoint);
-
-	// The API returns an array directly; wrap it for consistent n8n output
-	if (Array.isArray(result)) {
-		return { monitors: result } as IDataObject;
-	}
-	return result;
+	return await parallelApiRequest(executeFunctions, 'GET', '/v1/monitors', undefined, query);
 }
