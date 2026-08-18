@@ -67,7 +67,7 @@ npm run check-package
 
 `npm run check-package` packs the project, verifies every declared n8n path, installs the tarball in a clean temporary consumer, and requires its public entry point.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
 
 ## Release
 
@@ -81,7 +81,3 @@ Releases are published only by the tag-triggered GitHub Actions workflow. Config
 - [Monitor API](https://docs.parallel.ai/monitor-api/monitor-quickstart)
 - [Chat API](https://docs.parallel.ai/chat-api/chat-quickstart)
 - [n8n community-node documentation](https://docs.n8n.io/integrations/community-nodes/)
-
-## License
-
-[MIT](LICENSE.md)
