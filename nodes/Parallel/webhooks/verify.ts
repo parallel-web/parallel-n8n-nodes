@@ -45,14 +45,16 @@ export function verifyParallelWebhook(input: VerifyWebhookInput): WebhookVerific
 	return { valid: false, reason: 'invalid-signature' };
 }
 
-export function getParallelWebhookError(input: {
+export function getParallelWebhookErrorMessage(input: {
 	secret?: string;
 	webhookId?: string;
 	webhookTimestamp?: string;
 	signatureHeader?: string;
 	rawBody: unknown;
 }): string | undefined {
-	if (!input.secret) return 'Webhook signature validation requires a webhook secret';
+	if (!input.secret) {
+		return 'Webhook signature validation requires a webhook secret. Add the secret from Parallel Platform Settings to the credential';
+	}
 	if (!input.webhookId || !input.webhookTimestamp || !input.signatureHeader) {
 		return 'Missing Parallel webhook headers';
 	}

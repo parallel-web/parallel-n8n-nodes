@@ -18,7 +18,6 @@ Before opening a pull request, run:
 npm run lint
 npm run typecheck
 npm test
-npm run prerelease
 npm audit --omit=dev
 npm run check-package
 git diff --check

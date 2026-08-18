@@ -2,7 +2,10 @@ const assert = require('node:assert/strict');
 const { createHmac } = require('node:crypto');
 const test = require('node:test');
 
-const { verifyParallelWebhook } = require('../dist/nodes/Parallel/webhooks/verify.js');
+const {
+	getParallelWebhookErrorMessage,
+	verifyParallelWebhook,
+} = require('../dist/nodes/Parallel/webhooks/verify.js');
 const { ParallelTrigger } = require('../dist/nodes/ParallelTrigger/ParallelTrigger.node.js');
 
 function signedFixture({ body, id = 'msg_123', timestamp = 1_700_000_000 }) {
@@ -59,6 +62,61 @@ test('webhook verification rejects modified, malformed, and stale requests', () 
 		valid: false,
 		reason: 'invalid-secret',
 	});
+});
+
+test('webhook validation explains missing and invalid inputs', () => {
+	const rawBody = Buffer.from('{"value":1}');
+	const timestamp = String(Math.floor(Date.now() / 1000));
+	const completeInput = {
+		secret: `whsec_${Buffer.from('test webhook key').toString('base64')}`,
+		webhookId: 'msg_123',
+		webhookTimestamp: timestamp,
+		signatureHeader: 'v1,not-a-valid-signature',
+		rawBody,
+	};
+
+	assert.match(
+		getParallelWebhookErrorMessage({ ...completeInput, secret: undefined }),
+		/Add the secret from Parallel Platform Settings/,
+	);
+	assert.equal(
+		getParallelWebhookErrorMessage({ ...completeInput, webhookId: undefined }),
+		'Missing Parallel webhook headers',
+	);
+	assert.equal(
+		getParallelWebhookErrorMessage({ ...completeInput, rawBody: {} }),
+		'Raw webhook body is unavailable; signature verification cannot proceed safely',
+	);
+	assert.equal(
+		getParallelWebhookErrorMessage(completeInput),
+		'Invalid Parallel webhook signature (invalid-signature)',
+	);
+});
+
+test('completed Task events encode the run ID in the result request path', async () => {
+	let requestUrl;
+	const context = {
+		getBodyData: () => ({
+			type: 'task_run.status',
+			data: { run_id: 'trun/a b', status: 'completed' },
+		}),
+		getNodeParameter: (name) => {
+			if (name === 'validateSignatures') return false;
+			if (name === 'onlyCompleted') return true;
+			if (name === 'includeWebhookData') return false;
+			throw new Error(`Unexpected parameter ${name}`);
+		},
+		helpers: {
+			returnJsonArray: (items) => items.map((json) => ({ json })),
+			httpRequestWithAuthentication: async (_credential, options) => {
+				requestUrl = options.url;
+				return { result: 'complete' };
+			},
+		},
+	};
+
+	await ParallelTrigger.prototype.webhook.call(context);
+	assert.equal(requestUrl, 'https://api.parallel.ai/v1/tasks/runs/trun%2Fa%20b/result');
 });
 
 test('failed Task events are emitted without fetching the result endpoint', async () => {

@@ -27,8 +27,7 @@
 	"scripts": {
 		"build": "n8n-node build",
 		"dev": "n8n-node dev",
-		"format": "prettier --write .",
-		"format:check": "prettier --check .",
+		"format": "prettier --write",
 		"lint": "n8n-node lint",
 		"lintfix": "n8n-node lint --fix",
 		"typecheck": "tsc --noEmit --incremental false",

@@ -8,13 +8,13 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 import { parallelApiRequestForWebhook } from '../Parallel/transport/ParallelApi';
-import { getParallelWebhookError } from '../Parallel/webhooks/verify';
+import { getParallelWebhookErrorMessage } from '../Parallel/webhooks/verify';
 
 async function validateWebhook(context: IWebhookFunctions): Promise<void> {
 	if (!(context.getNodeParameter('validateSignatures') as boolean)) return;
 	const credentials = await context.getCredentials('parallelApi');
 	const headers = context.getHeaderData();
-	const message = getParallelWebhookError({
+	const message = getParallelWebhookErrorMessage({
 		secret: credentials.webhookSecret as string | undefined,
 		webhookId: headers['webhook-id'] as string | undefined,
 		webhookTimestamp: headers['webhook-timestamp'] as string | undefined,
@@ -27,6 +27,7 @@ async function validateWebhook(context: IWebhookFunctions): Promise<void> {
 }
 
 export class ParallelMonitorTrigger implements INodeType {
+	// Parallel receives this URL in the Monitor create/update request; activation does not register a remote webhook.
 	webhookMethods = {
 		default: {
 			async checkExists(this: IHookFunctions): Promise<boolean> {
