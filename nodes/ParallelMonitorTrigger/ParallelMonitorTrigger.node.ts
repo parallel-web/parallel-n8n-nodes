@@ -49,7 +49,8 @@ export class ParallelMonitorTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["eventTypeFilter"].join(", ")}}',
-		description: 'Triggers when a Parallel Monitor detects events, completes an execution, or encounters an error',
+		description:
+			'Triggers when a Parallel Monitor detects events, completes an execution, or encounters an error',
 		defaults: {
 			name: 'Parallel Monitor Event',
 		},
@@ -75,7 +76,8 @@ export class ParallelMonitorTrigger implements INodeType {
 				name: 'webhookUrl',
 				type: 'notice',
 				default: '',
-				description: 'Use the webhook URL that n8n provides for this trigger node when creating or updating your Parallel monitor',
+				description:
+					'Use the webhook URL that n8n provides for this trigger node when creating or updating your Parallel monitor',
 			},
 			{
 				displayName: 'Event Types',
@@ -113,7 +115,8 @@ export class ParallelMonitorTrigger implements INodeType {
 				name: 'validateSignatures',
 				type: 'boolean',
 				default: true,
-				description: 'Whether to validate the exact request body using the configured webhook secret',
+				description:
+					'Whether to validate the exact request body using the configured webhook secret',
 			},
 			{
 				displayName: 'Include Webhook Data',

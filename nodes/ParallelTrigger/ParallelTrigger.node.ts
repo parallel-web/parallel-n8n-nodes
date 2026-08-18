@@ -75,14 +75,16 @@ export class ParallelTrigger implements INodeType {
 				name: 'webhookUrl',
 				type: 'notice',
 				default: '',
-				description: 'Use the webhook URL that n8n provides for this trigger node when configuring your Parallel task webhook',
+				description:
+					'Use the webhook URL that n8n provides for this trigger node when configuring your Parallel task webhook',
 			},
 			{
 				displayName: 'Validate Webhook Signatures',
 				name: 'validateSignatures',
 				type: 'boolean',
 				default: true,
-				description: 'Whether to validate the exact request body using the configured webhook secret',
+				description:
+					'Whether to validate the exact request body using the configured webhook secret',
 			},
 			{
 				displayName: 'Only Trigger on Successful Tasks',

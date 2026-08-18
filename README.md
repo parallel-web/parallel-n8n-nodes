@@ -58,6 +58,7 @@ The trigger lifecycle does not register a remote webhook itself; the URL is part
 
 ```bash
 npm ci
+npm run format:check
 npm run lint
 npm run typecheck
 npm test
