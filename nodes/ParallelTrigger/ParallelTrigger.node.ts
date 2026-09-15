@@ -6,25 +6,9 @@ import type {
 	IWebhookFunctions,
 	IWebhookResponseData,
 } from 'n8n-workflow';
-import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
 import { parallelApiRequestForWebhook } from '../Parallel/transport/ParallelApi';
-import { getParallelWebhookErrorMessage } from '../Parallel/webhooks/verify';
-
-async function validateWebhook(context: IWebhookFunctions): Promise<void> {
-	if (!(context.getNodeParameter('validateSignatures') as boolean)) return;
-	const credentials = await context.getCredentials('parallelApi');
-	const headers = context.getHeaderData();
-	const message = getParallelWebhookErrorMessage({
-		secret: credentials.webhookSecret as string | undefined,
-		webhookId: headers['webhook-id'] as string | undefined,
-		webhookTimestamp: headers['webhook-timestamp'] as string | undefined,
-		signatureHeader: headers['webhook-signature'] as string | undefined,
-		rawBody: context.getRequestObject().rawBody,
-	});
-	if (message) {
-		throw new NodeApiError(context.getNode(), {}, { message });
-	}
-}
+import { respond, validateWebhook } from '../Parallel/webhooks/response';
 
 export class ParallelTrigger implements INodeType {
 	// Parallel receives this URL in the Task creation request; activation does not register a remote webhook.
@@ -75,14 +59,16 @@ export class ParallelTrigger implements INodeType {
 				name: 'webhookUrl',
 				type: 'notice',
 				default: '',
-				description: 'Use the webhook URL that n8n provides for this trigger node when configuring your Parallel task webhook',
+				description:
+					'Use the webhook URL that n8n provides for this trigger node when configuring your Parallel task webhook',
 			},
 			{
 				displayName: 'Validate Webhook Signatures',
 				name: 'validateSignatures',
 				type: 'boolean',
 				default: true,
-				description: 'Whether to validate the exact request body using the configured webhook secret',
+				description:
+					'Whether to validate the exact request body using the configured webhook secret',
 			},
 			{
 				displayName: 'Only Trigger on Successful Tasks',
@@ -99,33 +85,41 @@ export class ParallelTrigger implements INodeType {
 				description: 'Whether to include the complete webhook payload in the output',
 			},
 		],
-		usableAsTool: true,
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-		await validateWebhook(this);
+		const invalid = await validateWebhook(this);
+		if (invalid) return invalid;
 		const payload = this.getBodyData() as IDataObject;
-		if (payload.type !== 'task_run.status') return { noWebhookResponse: true };
+		if (payload.type !== 'task_run.status') return respond(this, 200);
 		const data = payload.data as IDataObject | undefined;
-		if (!data?.run_id || !data.status) return { noWebhookResponse: true };
+		if (!data?.run_id || !data.status) return respond(this, 400, 'Missing Task run_id or status');
 		const status = String(data.status);
-		if (!['completed', 'failed'].includes(status)) return { noWebhookResponse: true };
+		if (!['completed', 'failed'].includes(status)) return respond(this, 200);
 		if ((this.getNodeParameter('onlyCompleted') as boolean) && status !== 'completed') {
-			return { noWebhookResponse: true };
+			return respond(this, 200);
 		}
 
 		const output: IDataObject = {
+			webhook_id: this.getHeaderData()['webhook-id'],
 			run_id: String(data.run_id),
 			status,
 			event: data,
 		};
 		if (status === 'completed') {
-			output.result = await parallelApiRequestForWebhook(
-				this,
-				'GET',
-				`/v1/tasks/runs/${encodeURIComponent(String(data.run_id))}/result`,
-			);
+			try {
+				output.result = await parallelApiRequestForWebhook(
+					this,
+					'GET',
+					`/v1/tasks/runs/${encodeURIComponent(String(data.run_id))}/result`,
+					undefined,
+					{ timeout: 4 },
+				);
+			} catch {
+				return respond(this, 503, 'Task result is unavailable; retry this delivery');
+			}
 		}
+
 		if (this.getNodeParameter('includeWebhookData') as boolean) {
 			output.webhook_data = payload;
 		}

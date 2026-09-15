@@ -96,6 +96,7 @@ test('webhook validation explains missing and invalid inputs', () => {
 test('completed Task events encode the run ID in the result request path', async () => {
 	let requestUrl;
 	const context = {
+		getHeaderData: () => ({ 'webhook-id': 'test-delivery' }),
 		getBodyData: () => ({
 			type: 'task_run.status',
 			data: { run_id: 'trun/a b', status: 'completed' },
@@ -122,6 +123,7 @@ test('completed Task events encode the run ID in the result request path', async
 test('failed Task events are emitted without fetching the result endpoint', async () => {
 	let requestCount = 0;
 	const context = {
+		getHeaderData: () => ({ 'webhook-id': 'test-delivery' }),
 		getBodyData: () => ({
 			type: 'task_run.status',
 			data: { run_id: 'trun_failed', status: 'failed', error: { message: 'boom' } },

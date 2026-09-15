@@ -6,25 +6,9 @@ import type {
 	IWebhookFunctions,
 	IWebhookResponseData,
 } from 'n8n-workflow';
-import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
 import { parallelApiRequestForWebhook } from '../Parallel/transport/ParallelApi';
-import { getParallelWebhookErrorMessage } from '../Parallel/webhooks/verify';
-
-async function validateWebhook(context: IWebhookFunctions): Promise<void> {
-	if (!(context.getNodeParameter('validateSignatures') as boolean)) return;
-	const credentials = await context.getCredentials('parallelApi');
-	const headers = context.getHeaderData();
-	const message = getParallelWebhookErrorMessage({
-		secret: credentials.webhookSecret as string | undefined,
-		webhookId: headers['webhook-id'] as string | undefined,
-		webhookTimestamp: headers['webhook-timestamp'] as string | undefined,
-		signatureHeader: headers['webhook-signature'] as string | undefined,
-		rawBody: context.getRequestObject().rawBody,
-	});
-	if (message) {
-		throw new NodeApiError(context.getNode(), {}, { message });
-	}
-}
+import { respond, validateWebhook } from '../Parallel/webhooks/response';
 
 export class ParallelMonitorTrigger implements INodeType {
 	// Parallel receives this URL in the Monitor create/update request; activation does not register a remote webhook.
@@ -49,7 +33,8 @@ export class ParallelMonitorTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["eventTypeFilter"].join(", ")}}',
-		description: 'Triggers when a Parallel Monitor detects events, completes an execution, or encounters an error',
+		description:
+			'Triggers when a Parallel Monitor detects events, completes an execution, or encounters an error',
 		defaults: {
 			name: 'Parallel Monitor Event',
 		},
@@ -75,7 +60,8 @@ export class ParallelMonitorTrigger implements INodeType {
 				name: 'webhookUrl',
 				type: 'notice',
 				default: '',
-				description: 'Use the webhook URL that n8n provides for this trigger node when creating or updating your Parallel monitor',
+				description:
+					'Use the webhook URL that n8n provides for this trigger node when creating or updating your Parallel monitor',
 			},
 			{
 				displayName: 'Event Types',
@@ -109,11 +95,20 @@ export class ParallelMonitorTrigger implements INodeType {
 				description: 'Whether to fetch the full event group details when an event is detected',
 			},
 			{
+				displayName: 'Retry on Fetch Failure',
+				name: 'retryOnFetchFailure',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to ask Parallel to retry instead of emitting event_group_error when fetching fails. Retries can deliver the same event more than once.',
+			},
+			{
 				displayName: 'Validate Webhook Signatures',
 				name: 'validateSignatures',
 				type: 'boolean',
 				default: true,
-				description: 'Whether to validate the exact request body using the configured webhook secret',
+				description:
+					'Whether to validate the exact request body using the configured webhook secret',
 			},
 			{
 				displayName: 'Include Webhook Data',
@@ -123,19 +118,20 @@ export class ParallelMonitorTrigger implements INodeType {
 				description: 'Whether to include the complete webhook payload in the output',
 			},
 		],
-		usableAsTool: true,
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-		await validateWebhook(this);
+		const invalid = await validateWebhook(this);
+		if (invalid) return invalid;
 		const payload = this.getBodyData() as IDataObject;
 		const eventType = String(payload.type ?? '');
 		const filters = this.getNodeParameter('eventTypeFilter') as string[];
-		if (!filters.includes(eventType)) return { noWebhookResponse: true };
+		if (!filters.includes(eventType)) return respond(this, 200);
 		const data = payload.data as IDataObject | undefined;
-		if (!data?.monitor_id) return { noWebhookResponse: true };
+		if (!data?.monitor_id) return respond(this, 400, 'Missing monitor_id');
 
 		const output: IDataObject = {
+			webhook_id: this.getHeaderData()['webhook-id'],
 			event_type: eventType,
 			monitor_id: String(data.monitor_id),
 			timestamp: payload.timestamp,
@@ -143,20 +139,26 @@ export class ParallelMonitorTrigger implements INodeType {
 			metadata: data.metadata ?? {},
 		};
 		const event = data.event as IDataObject | undefined;
-		if (
-			eventType === 'monitor.event.detected' &&
-			(this.getNodeParameter('fetchEventGroup') as boolean) &&
-			event?.event_group_id
-		) {
+		if (eventType === 'monitor.event.detected') {
+			if (!event?.event_group_id) return respond(this, 400, 'Missing event_group_id');
 			output.event_group_id = event.event_group_id;
-			output.event_group = await parallelApiRequestForWebhook(
-				this,
-				'GET',
-				`/v1/monitors/${encodeURIComponent(String(data.monitor_id))}/events`,
-				undefined,
-				{ event_group_id: event.event_group_id },
-			);
+			if (this.getNodeParameter('fetchEventGroup') as boolean) {
+				try {
+					output.event_group = await parallelApiRequestForWebhook(
+						this,
+						'GET',
+						`/v1/monitors/${encodeURIComponent(String(data.monitor_id))}/events`,
+						undefined,
+						{ event_group_id: event.event_group_id },
+					);
+				} catch (error) {
+					if (this.getNodeParameter('retryOnFetchFailure', false) as boolean)
+						return respond(this, 503, 'Monitor events are unavailable; retry this delivery');
+					output.event_group_error = error instanceof Error ? error.message : String(error);
+				}
+			}
 		}
+
 		if (this.getNodeParameter('includeWebhookData') as boolean) {
 			output.webhook_data = payload;
 		}
