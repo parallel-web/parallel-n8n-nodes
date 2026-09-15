@@ -60,7 +60,7 @@
 		"eslint": "9.39.4",
 		"n8n-workflow": "^2.16.0",
 		"prettier": "3.8.3",
-		"typescript": "5.9.3"
+		"typescript": "7.0.2"
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
