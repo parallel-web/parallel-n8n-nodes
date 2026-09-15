@@ -170,6 +170,10 @@ export function buildMonitorUpdateRequest(input: MonitorUpdateInput): IDataObjec
 }
 
 export function buildMonitorEventsQuery(input: IDataObject): IDataObject {
+	if (input.lookbackPeriod)
+		throw new Error(
+			'Saved lookbackPeriod is unsupported by the current Monitor API. Remove it and use cursor pagination; full historical coverage is not guaranteed.',
+		);
 	const query: IDataObject = {};
 	if (input.eventGroupId) query.event_group_id = input.eventGroupId;
 	if (input.cursor) query.cursor = input.cursor;

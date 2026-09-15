@@ -1,11 +1,8 @@
-import type {
-	IExecuteFunctions,
-	IDataObject,
-	INodePropertyOptions,
-} from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject, INodePropertyOptions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
-import { getErrorStatusCode, parallelApiRequest } from '../transport/ParallelApi';
-import { buildSourcePolicy, buildMetadata, wait, calculateBackoffDelay, isRetryableError } from '../utils';
+import { parallelApiRequest } from '../transport/ParallelApi';
+import { waitForTaskResult } from '../transport/waitForTaskResult';
+import { buildSourcePolicy, buildMetadata } from '../utils';
 
 export const description: INodePropertyOptions = {
 	name: 'Sync Web Enrichment',
@@ -61,7 +58,10 @@ export async function execute(
 			type: 'text',
 		};
 	} else if (outputSchemaType === 'json') {
-		const jsonSchemaString = executeFunctions.getNodeParameter('syncOutputJsonSchema', itemIndex) as string;
+		const jsonSchemaString = executeFunctions.getNodeParameter(
+			'syncOutputJsonSchema',
+			itemIndex,
+		) as string;
 		try {
 			const jsonSchema = JSON.parse(jsonSchemaString);
 			taskSpec.output_schema = {
@@ -82,10 +82,17 @@ export async function execute(
 		let textDescription = '';
 		if (inputType === 'json') {
 			// Required description when input is JSON
-			textDescription = executeFunctions.getNodeParameter('textOutputDescriptionRequired', itemIndex) as string;
+			textDescription = executeFunctions.getNodeParameter(
+				'textOutputDescriptionRequired',
+				itemIndex,
+			) as string;
 		} else {
 			// Optional description when input is text
-			const optionalDescription = executeFunctions.getNodeParameter('textOutputDescription', itemIndex, '') as string;
+			const optionalDescription = executeFunctions.getNodeParameter(
+				'textOutputDescription',
+				itemIndex,
+				'',
+			) as string;
 			if (optionalDescription) {
 				textDescription = optionalDescription;
 			}
@@ -93,7 +100,11 @@ export async function execute(
 
 		// If we have a text description, modify the task spec to include it
 		if (textDescription) {
-			if (taskSpec.output_schema && typeof taskSpec.output_schema === 'object' && (taskSpec.output_schema as IDataObject).type === 'text') {
+			if (
+				taskSpec.output_schema &&
+				typeof taskSpec.output_schema === 'object' &&
+				(taskSpec.output_schema as IDataObject).type === 'text'
+			) {
 				// Add description to existing text schema
 				(taskSpec.output_schema as IDataObject).description = textDescription;
 			} else {
@@ -125,50 +136,19 @@ export async function execute(
 		body.source_policy = sourcePolicy;
 	}
 
-	// Create task run
+	const minutes = Number(executeFunctions.getNodeParameter('syncWaitMinutes', itemIndex, 75));
+	if (!Number.isFinite(minutes) || minutes < 1 || minutes > 120)
+		throw new NodeOperationError(
+			executeFunctions.getNode(),
+			'Maximum Wait must be between 1 and 120 minutes',
+			{ itemIndex },
+		);
 	const taskRun = await parallelApiRequest(executeFunctions, 'POST', '/v1/tasks/runs', body);
-	const runId = taskRun.run_id;
-
-	// Poll for result with exponential backoff retry logic
-	const maxAttempts = 15;
-	const deadline = Date.now() + 30 * 60 * 1000;
-	let attempt = 0;
-
-	while (attempt < maxAttempts) {
-		try {
-			const timeout = 240;
-			const result = await parallelApiRequest(
-				executeFunctions,
-				'GET',
-				`/v1/tasks/runs/${runId}/result?timeout=${timeout}`,
-			);
-
-			return result;
-		} catch (error) {
-			attempt++;
-			const statusCode = getErrorStatusCode(error);
-
-			// Handle retryable errors with exponential backoff
-			if (isRetryableError(statusCode) && attempt < maxAttempts && Date.now() < deadline) {
-				const delay = calculateBackoffDelay(attempt);
-
-				// Wait before retrying
-				await wait(delay);
-				continue;
-			}
-
-			// For non-retryable errors or if we've exceeded max attempts, throw
-			throw new NodeOperationError(
-				executeFunctions.getNode(),
-				error instanceof Error ? error : String(error),
-				{ itemIndex },
-			);
-		}
-	}
-
-	throw new NodeOperationError(
-		executeFunctions.getNode(),
-		`Task execution timed out after ${maxAttempts} attempts (approximately ${maxAttempts * 4} minutes)`,
-		{ itemIndex },
-	);
+	if (typeof taskRun.run_id !== 'string' || !taskRun.run_id)
+		throw new NodeOperationError(
+			executeFunctions.getNode(),
+			'Task creation returned no run ID. Check Parallel before retrying to avoid duplicate tasks',
+			{ itemIndex },
+		);
+	return await waitForTaskResult(executeFunctions, taskRun.run_id, minutes, itemIndex);
 }
