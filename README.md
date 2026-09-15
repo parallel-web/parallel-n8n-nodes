@@ -81,3 +81,37 @@ Releases are published only by the tag-triggered GitHub Actions workflow. Config
 - [Monitor API](https://docs.parallel.ai/monitor-api/monitor-quickstart)
 - [Chat API](https://docs.parallel.ai/chat-api/chat-quickstart)
 - [n8n community-node documentation](https://docs.n8n.io/integrations/community-nodes/)
+
+## Upgrading from 0.2.0
+
+Back up your n8n database and exported workflows before updating. Test the upgrade
+in a disposable instance first, using Node 22.22 or newer. Existing node,
+credential and operation identifiers remain unchanged.
+
+- Search defaults to Basic, equivalent to the previous Base setting. Explicit
+  Base and Pro values still map to Basic and Advanced.
+- Webhook signature validation defaults to enabled. Workflows that omitted the
+  old default now require the Parallel webhook secret in their credentials.
+  Configure it before reactivating callbacks. An explicitly saved disabled setting
+  remains disabled. Both Standard and legacy signing formats are supported.
+- Monitor callbacks retain `event_group_id` at the top level. Fetch failures still
+  emit `event_group_error` by default. Enable **Retry on Fetch Failure** to return
+  a retryable HTTP failure instead. Accepted events may be delivered repeatedly;
+  use the additive `webhook_id` to identify redelivery. With signature validation
+  disabled, this header is untrusted caller input.
+- The GA Monitor events endpoint returns an `events` array and `next_cursor`.
+  Update expressions that consumed the old alpha event-group response accordingly.
+  Saved **Lookback Period** options are rejected explicitly because the current
+  API cannot guarantee that historical window. Remove that option and use cursor
+  pagination, handling unavailable older history in your workflow.
+- Synchronous Tasks have a configurable total result-wait budget of 1–120 minutes,
+  defaulting to 75 minutes to accommodate the old 15 four-minute polls plus
+  backoff. This is now a hard local bound; host execution limits can be shorter.
+  A timeout does not cancel the Task. Use the reported run ID with **Get Task Run
+  Result**, rather than submitting another Task. Prefer Async for long processors.
+- Authenticated events excluded by a trigger's filter receive HTTP 200 without
+  starting the workflow. Malformed matching events receive 400; invalid signatures
+  receive 401. Task result fetch failures and opted-in Monitor fetch failures
+  receive 503. Enrichment requests have a five-second local timeout.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for validation and the reviewed release process.
