@@ -33,12 +33,19 @@ export function verifyParallelWebhook(input: VerifyWebhookInput): WebhookVerific
 
 	const prefix = Buffer.from(`${input.webhookId}.${input.webhookTimestamp}.`, 'utf8');
 	const payload = Buffer.concat([prefix, input.rawBody]);
-	const expected = createHmac('sha256', secret).update(payload).digest();
+	// Parallel supports Standard Webhooks and legacy HMAC over the complete secret.
+	const expectedSignatures = [secret, Buffer.from(input.secret, 'utf8')].map((key) =>
+		createHmac('sha256', key).update(payload).digest(),
+	);
 
 	for (const candidate of input.signatureHeader.trim().split(/\s+/)) {
 		if (!candidate.startsWith('v1,')) continue;
 		const provided = Buffer.from(candidate.slice(3), 'base64');
-		if (provided.length === expected.length && timingSafeEqual(expected, provided)) {
+		if (
+			expectedSignatures.some(
+				(expected) => provided.length === expected.length && timingSafeEqual(expected, provided),
+			)
+		) {
 			return { valid: true };
 		}
 	}
