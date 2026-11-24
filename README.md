@@ -93,10 +93,12 @@ string at `choices[0].message.content` in both modes. Existing `JSON.parse(...)`
 expressions still apply. Citations are available at `basis`. Research IDs replace
 Chat IDs, and Research currently returns null for basis reasoning and confidence.
 
-Saved Speed (including workflows with no saved model) and Lite use Low effort.
-Base uses Medium and Core uses High. The action waits for an interactive Research
-result. At current list prices, the default changes from $5 to $10 per 1,000
-successful requests. Check your Research API pricing and access before upgrading.
+The published 0.2.0 package always used Speed. Workflows with no saved model use
+Low effort after upgrading. When a workflow already stores a model, Speed and Lite
+use Low, Base uses Medium, and Core uses High. At current list prices, interactive
+Research costs $10 for Low, $20 for Medium, and $50 for High per 1,000 successful
+requests. Speed cost $5 per 1,000. The action waits for the Research result. Check
+your Research API pricing and access before upgrading.
 
 - Search defaults to Basic, equivalent to the previous Base setting. Explicit
   Base and Pro values still map to Basic and Advanced.

@@ -161,6 +161,19 @@ test('all explicit saved model selections resolve to interactive Research effort
 	assert.deepEqual(efforts, ['low', 'low', 'medium', 'high']);
 });
 
+test('a saved system prompt can carry the question when the input expression is empty', async () => {
+	const instructions = 'Explain fusion in one sentence.';
+	const [result] = await executeWebChat(
+		[{ chatInputPrompt: '', chatAdditionalOptions: { systemPrompt: instructions } }],
+		async (_credential, { body }) => {
+			assert.deepEqual(body.input, [{ role: 'user', content: '' }]);
+			assert.equal(body.instructions, instructions);
+			return researchResponse('Fusion combines nuclei.');
+		},
+	);
+	assert.equal(result[0].json.choices[0].message.content, 'Fusion combines nuclei.');
+});
+
 test('invalid saved inputs report useful errors before sending a request', async () => {
 	const noRequest = async () => assert.fail('Unexpected HTTP request');
 	for (const [saved, message] of [

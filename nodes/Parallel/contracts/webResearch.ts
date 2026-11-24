@@ -21,18 +21,22 @@ export function buildResearchRequest({
 	systemPrompt,
 	structuredOutput,
 }: ResearchRequestInput): IDataObject {
-	if (!prompt.trim()) throw new Error('Input Prompt is required.');
+	const hasPrompt = Boolean(prompt.trim());
+	const instructions =
+		typeof systemPrompt === 'string' && systemPrompt.trim() ? systemPrompt : undefined;
+	if (!hasPrompt && !instructions) throw new Error('Input Prompt is required.');
 	const effort = savedEfforts.get(savedModel);
 	if (!effort) throw new Error(`Unknown saved model "${savedModel}". Select a Research Effort.`);
 
 	const body: IDataObject = {
 		model: 'parallel',
-		input: prompt,
+		// Preserve the legacy user turn when the system prompt carries the question.
+		input: hasPrompt ? prompt : [{ role: 'user', content: prompt }],
 		reasoning: { effort },
 		background: false,
 		stream: false,
 	};
-	if (typeof systemPrompt === 'string' && systemPrompt.trim()) body.instructions = systemPrompt;
+	if (instructions) body.instructions = instructions;
 	if (structuredOutput) {
 		const name = structuredOutput.name.trim();
 		if (!name) throw new Error('JSON Schema Name is required.');
