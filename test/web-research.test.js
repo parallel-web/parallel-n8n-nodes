@@ -284,6 +284,42 @@ test('valid Research object schemas and their value field are passed through', a
 	assert.deepEqual(result[0].json.basis, objectBasis);
 });
 
+test('saved object references survive Research citation nesting without wrapping the answer', async () => {
+	const objectSchema = {
+		type: 'object',
+		properties: {
+			name: { $ref: '#/definitions/Name' },
+			names: { type: 'array', items: { $ref: '#/properties/name' } },
+			count: { $ref: '#/$defs/saved0' },
+		},
+		required: ['name', 'names', 'count'],
+		definitions: { Name: { type: 'string', minLength: 2 } },
+		$defs: { saved0: { type: 'integer' } },
+	};
+	const content = '{"name":"Acme","names":["Acme"],"count":1}';
+	const objectBasis = [
+		{ ...basis[0], field: 'name' },
+		{ ...basis[0], field: 'names' },
+	];
+	const [result] = await executeWebChat([savedJsonOutput(objectSchema)], async (_, { body }) => {
+		const preparedSchema = body.text.format.schema;
+		assert.deepEqual(preparedSchema.properties, {
+			name: { $ref: '#/$defs/saved1' },
+			names: { type: 'array', items: { $ref: '#/$defs/saved2' } },
+			count: { $ref: '#/$defs/saved0' },
+		});
+		assert.deepEqual(preparedSchema.$defs, {
+			saved0: { type: 'integer' },
+			saved1: { type: 'string', minLength: 2 },
+			saved2: { $ref: '#/$defs/saved1' },
+		});
+		assert.deepEqual(preparedSchema.required, objectSchema.required);
+		return researchResponse(content, objectBasis);
+	});
+	assert.equal(result[0].json.choices[0].message.content, content);
+	assert.deepEqual(result[0].json.basis, objectBasis);
+});
+
 test('a top-level JSON union is unwrapped and invalid envelopes fail explicitly', async () => {
 	const union = { anyOf: [{ type: 'string' }, { type: 'null' }] };
 	const [result] = await executeWebChat([savedJsonOutput(union)], async (_, { body }) => {

@@ -3,9 +3,9 @@ import { jsonParse } from 'n8n-workflow';
 import {
 	acceptsResearchRoot,
 	isSchemaObject,
+	prepareResearchSchema,
 	researchValueKey,
 	unwrapResearchAnswer,
-	wrapResearchSchema,
 } from './researchSchema';
 
 const savedEfforts = new Map([
@@ -60,7 +60,7 @@ export function buildResearchRequest({
 			format: {
 				type: 'json_schema',
 				name,
-				schema: wrappedOutput ? wrapResearchSchema(schema) : schema,
+				schema: prepareResearchSchema(schema, wrappedOutput),
 			},
 		};
 	}

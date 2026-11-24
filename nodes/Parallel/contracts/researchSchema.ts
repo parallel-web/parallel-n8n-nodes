@@ -72,7 +72,11 @@ function resolveUri(id: string, base: string): URL | undefined {
 	}
 }
 
-function relocateReferences(root: IDataObject, idKey: string): IDataObject {
+function relocateReferences(
+	root: IDataObject,
+	idKey: string,
+	keepRootDefinitions: boolean,
+): IDataObject {
 	// Use an in-memory base for relative identifiers. No references are fetched.
 	const base = 'https://schema.invalid/';
 	const resources = new Map<string, string>();
@@ -95,10 +99,14 @@ function relocateReferences(root: IDataObject, idKey: string): IDataObject {
 
 	const refNames = new Map<string, string>();
 	const definitions: IDataObject = {};
+	const reserved = keepRootDefinitions && isSchemaObject(root.$defs) ? root.$defs : {};
+	const keepRootPointers = keepRootDefinitions && nodes.every(({ node }) => !hasOwn(node, idKey));
+	let nextDefinition = 0;
 	for (const { node, resource } of nodes) {
 		const ref = node.$ref;
-		const uri = typeof ref === 'string' ? resolveUri(ref, resource) : undefined;
-		if (!uri || typeof ref !== 'string') continue;
+		if (typeof ref !== 'string' || (keepRootPointers && ref.startsWith('#/$defs/'))) continue;
+		const uri = resolveUri(ref, resource);
+		if (!uri) continue;
 		const document = uri.href.split('#')[0];
 		const pointer =
 			resources.get(document) ?? (document === base && ref.startsWith('#') ? '' : undefined);
@@ -114,7 +122,9 @@ function relocateReferences(root: IDataObject, idKey: string): IDataObject {
 		if (!spec) continue;
 		let name = refNames.get(target);
 		if (!name) {
-			name = `saved${refNames.size}`;
+			do {
+				name = `saved${nextDefinition++}`;
+			} while (hasOwn(reserved, name));
 			refNames.set(target, name);
 			definitions[name] = spec;
 		}
@@ -127,23 +137,30 @@ function relocateReferences(root: IDataObject, idKey: string): IDataObject {
 	return definitions;
 }
 
-export function wrapResearchSchema(schema: IDataObject): IDataObject {
+export function prepareResearchSchema(schema: IDataObject, wrap: boolean): IDataObject {
 	const { $schema, ...root } = structuredClone(schema);
+	const idKey = typeof $schema === 'string' && $schema.includes('/draft-04/') ? 'id' : '$id';
+	// Research hoists only root $defs when it combines the answer and citation schemas.
+	// Keep pointer targets there so they survive that second wrapping step.
+	const definitions = relocateReferences(root, idKey, !wrap);
+	const hasRelocatedReferences = Object.keys(definitions).length > 0;
+	if (!wrap) {
+		if (!hasRelocatedReferences) return schema;
+		if ($schema !== undefined) root.$schema = $schema;
+		return {
+			...root,
+			$defs: { ...(isSchemaObject(root.$defs) ? root.$defs : {}), ...definitions },
+		};
+	}
+
 	const envelope: IDataObject = {
 		type: 'object',
-		properties: { [researchValueKey]: schema },
+		properties: { [researchValueKey]: hasRelocatedReferences ? root : schema },
 		required: [researchValueKey],
 		additionalProperties: false,
 	};
 	if ($schema !== undefined) envelope.$schema = $schema;
-	const idKey = typeof $schema === 'string' && $schema.includes('/draft-04/') ? 'id' : '$id';
-	const definitions = relocateReferences(root, idKey);
-	if (!Object.keys(definitions).length) return envelope;
-
-	// Research hoists root $defs when it combines the answer and citation schemas.
-	// Keep pointer targets there so they survive that second wrapping step.
-	envelope.$defs = definitions;
-	envelope.properties = { [researchValueKey]: root };
+	if (hasRelocatedReferences) envelope.$defs = definitions;
 	return envelope;
 }
 
