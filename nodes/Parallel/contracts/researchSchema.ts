@@ -19,6 +19,7 @@ const schemaChildren = new Set([
 	'unevaluatedProperties',
 	'propertyNames',
 	'contains',
+	'contentSchema',
 	'not',
 	'if',
 	'then',
@@ -72,6 +73,30 @@ function resolveUri(id: string, base: string): URL | undefined {
 	}
 }
 
+interface LocatedSchema {
+	node: IDataObject;
+	resource: string;
+}
+
+function findPointerTarget(
+	root: IDataObject,
+	pointer: string,
+	resource: string,
+	schemas: ReadonlyMap<string, LocatedSchema>,
+): LocatedSchema | undefined {
+	let value: unknown = root;
+	let path = '';
+	for (const token of pointer.slice(1).split('/')) {
+		const key = token.replace(/~1/g, '/').replace(/~0/g, '~');
+		if (Array.isArray(value) && /^(0|[1-9]\d*)$/.test(key)) value = value[Number(key)];
+		else if (isSchemaObject(value) && hasOwn(value, key)) value = value[key];
+		else return undefined;
+		resource = schemas.get(path)?.resource ?? resource;
+		path += `/${token}`;
+	}
+	return isSchemaObject(value) ? { node: value, resource } : undefined;
+}
+
 function relocateReferences(
 	root: IDataObject,
 	idKey: string,
@@ -81,10 +106,11 @@ function relocateReferences(
 	const base = 'https://schema.invalid/';
 	const resources = new Map<string, string>();
 	const anchors = new Map<string, string>();
-	const schemas = new Map<string, IDataObject>();
-	const nodes: Array<{ node: IDataObject; resource: string }> = [];
-	visitSchemas(root, '', base, (node, pointer, parent) => {
-		schemas.set(pointer, node);
+	const schemas = new Map<string, LocatedSchema>();
+	const nodes: LocatedSchema[] = [];
+	function register(node: IDataObject, pointer: string, parent: string): string {
+		const existing = schemas.get(pointer);
+		if (existing) return existing.resource;
 		const id = node[idKey];
 		const uri = typeof id === 'string' ? resolveUri(id, parent) : undefined;
 		const resource = uri ? uri.href.split('#')[0] : parent;
@@ -93,9 +119,12 @@ function relocateReferences(
 		for (const anchor of [node.$anchor, node.$dynamicAnchor]) {
 			if (typeof anchor === 'string') anchors.set(`${resource}#${anchor}`, pointer);
 		}
-		nodes.push({ node, resource });
+		const located = { node, resource };
+		schemas.set(pointer, located);
+		nodes.push(located);
 		return resource;
-	});
+	}
+	visitSchemas(root, '', base, register);
 
 	const refNames = new Map<string, string>();
 	const definitions: IDataObject = {};
@@ -104,13 +133,18 @@ function relocateReferences(
 	let nextDefinition = 0;
 	for (const { node, resource } of nodes) {
 		const ref = node.$ref;
-		if (typeof ref !== 'string' || (keepRootPointers && ref.startsWith('#/$defs/'))) continue;
+		if (typeof ref !== 'string') continue;
 		const uri = resolveUri(ref, resource);
 		if (!uri) continue;
 		const document = uri.href.split('#')[0];
 		const pointer =
 			resources.get(document) ?? (document === base && ref.startsWith('#') ? '' : undefined);
-		const fragment = decodeURIComponent(uri.hash.slice(1));
+		let fragment: string;
+		try {
+			fragment = decodeURIComponent(uri.hash.slice(1));
+		} catch {
+			continue;
+		}
 		const target =
 			!fragment || fragment.startsWith('/')
 				? pointer === undefined
@@ -118,15 +152,22 @@ function relocateReferences(
 					: `${pointer}${fragment}`
 				: anchors.get(`${document}#${fragment}`);
 		if (target === undefined) continue;
-		const spec = schemas.get(target);
-		if (!spec) continue;
+		let located = schemas.get(target);
+		if (!located) {
+			// A JSON Pointer may name a schema stored under an extension keyword.
+			located = findPointerTarget(root, target, document, schemas);
+			if (!located) continue;
+			visitSchemas(located.node, target, located.resource, register);
+		}
+		// Provider formatting can drop intermediate keywords below a hoisted definition.
+		if (keepRootPointers && resource === base && /^\/\$defs\/[^/]*$/.test(fragment)) continue;
 		let name = refNames.get(target);
 		if (!name) {
 			do {
 				name = `saved${nextDefinition++}`;
 			} while (hasOwn(reserved, name));
 			refNames.set(target, name);
-			definitions[name] = spec;
+			definitions[name] = located.node;
 		}
 		node.$ref = `#/$defs/${name}`;
 	}

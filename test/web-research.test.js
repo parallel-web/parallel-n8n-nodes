@@ -284,6 +284,51 @@ test('valid Research object schemas and their value field are passed through', a
 	assert.deepEqual(result[0].json.basis, objectBasis);
 });
 
+test('saved array pointers can target schemas stored under extension keywords', async () => {
+	const saved = {
+		type: 'array',
+		items: { $ref: '#/x-types/0' },
+		'x-types': [{ type: 'array', items: { $ref: '#/contentSchema' } }],
+		contentSchema: { type: 'string', minLength: 2 },
+	};
+	const [result] = await executeWebChat([savedJsonOutput(saved)], async (_, { body }) => {
+		const schema = body.text.format.schema;
+		assert.deepEqual(schema.properties.value.items, { $ref: '#/$defs/saved0' });
+		assert.deepEqual(schema.$defs, {
+			saved0: { type: 'array', items: { $ref: '#/$defs/saved1' } },
+			saved1: { type: 'string', minLength: 2 },
+		});
+		return researchResponse('{"value":[["valid"]]}');
+	});
+	assert.equal(result[0].json.choices[0].message.content, '[["valid"]]');
+});
+
+test('object schemas discover transitive references under definitions that Research hoists', async () => {
+	const saved = {
+		type: 'object',
+		properties: {
+			value: { type: 'string', minLength: 2 },
+			copy: { $ref: '#/$defs/extensions/x-copy' },
+		},
+		$defs: { extensions: { 'x-copy': { $ref: '#/properties/value' } } },
+	};
+	const content = '{"value":"original","copy":"duplicate"}';
+	const [result] = await executeWebChat([savedJsonOutput(saved)], async (_, { body }) => {
+		const schema = body.text.format.schema;
+		assert.deepEqual(schema.properties, {
+			value: saved.properties.value,
+			copy: { $ref: '#/$defs/saved0' },
+		});
+		assert.deepEqual(schema.$defs, {
+			extensions: { 'x-copy': { $ref: '#/$defs/saved1' } },
+			saved0: { $ref: '#/$defs/saved1' },
+			saved1: saved.properties.value,
+		});
+		return researchResponse(content);
+	});
+	assert.equal(result[0].json.choices[0].message.content, content);
+});
+
 test('saved object references survive Research citation nesting without wrapping the answer', async () => {
 	const objectSchema = {
 		type: 'object',
