@@ -50,7 +50,7 @@ export async function execute(
 			: undefined;
 
 	try {
-		const body = buildResearchRequest({
+		const { body, wrappedOutput } = buildResearchRequest({
 			prompt,
 			savedModel,
 			systemPrompt: additionalOptions.systemPrompt,
@@ -65,7 +65,7 @@ export async function execute(
 			undefined,
 			{ 'User-Agent': `parallel-n8n-node/${version}` },
 		);
-		return formatResearchResponse(response, savedModel);
+		return formatResearchResponse(response, savedModel, wrappedOutput);
 	} catch (error) {
 		const message = error instanceof NodeApiError ? requestErrorMessage(error) : error;
 		throw new NodeOperationError(executeFunctions.getNode(), message, { itemIndex });

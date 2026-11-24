@@ -92,6 +92,11 @@ response format, schemas and system prompts carry over. The action returns a
 string at `choices[0].message.content` in both modes. Existing `JSON.parse(...)`
 expressions still apply. Citations are available at `basis`. Research IDs replace
 Chat IDs, and Research currently returns null for basis reasoning and confidence.
+Saved schemas with an array at the root still return an array as JSON text. The
+node adapts the schema for Research and returns the original JSON shape.
+Research's structured output requires matching schemas across `prefixItems`.
+A saved tuple with different schemas at each position may need a schema and
+expression change before upgrading.
 
 The published 0.2.0 package always used Speed. Workflows with no saved model use
 Low effort after upgrading. When a workflow already stores a model, Speed and Lite

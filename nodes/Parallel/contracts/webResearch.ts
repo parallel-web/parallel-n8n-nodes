@@ -1,5 +1,12 @@
 import type { IDataObject } from 'n8n-workflow';
 import { jsonParse } from 'n8n-workflow';
+import {
+	acceptsResearchRoot,
+	isSchemaObject,
+	researchValueKey,
+	unwrapResearchAnswer,
+	wrapResearchSchema,
+} from './researchSchema';
 
 const savedEfforts = new Map([
 	['speed', 'low'],
@@ -20,7 +27,7 @@ export function buildResearchRequest({
 	savedModel,
 	systemPrompt,
 	structuredOutput,
-}: ResearchRequestInput): IDataObject {
+}: ResearchRequestInput): { body: IDataObject; wrappedOutput: boolean } {
 	const hasPrompt = Boolean(prompt.trim());
 	const instructions =
 		typeof systemPrompt === 'string' && systemPrompt.trim() ? systemPrompt : undefined;
@@ -36,6 +43,7 @@ export function buildResearchRequest({
 		background: false,
 		stream: false,
 	};
+	let wrappedOutput = false;
 	if (instructions) body.instructions = instructions;
 	if (structuredOutput) {
 		const name = structuredOutput.name.trim();
@@ -44,12 +52,19 @@ export function buildResearchRequest({
 			typeof structuredOutput.schema === 'string'
 				? jsonParse<unknown>(structuredOutput.schema, { errorMessage: 'Invalid JSON in schema.' })
 				: structuredOutput.schema;
-		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+		if (!isSchemaObject(schema)) {
 			throw new Error('JSON Schema must be a JSON object.');
 		}
-		body.text = { format: { type: 'json_schema', name, schema: schema as IDataObject } };
+		wrappedOutput = !acceptsResearchRoot(schema);
+		body.text = {
+			format: {
+				type: 'json_schema',
+				name,
+				schema: wrappedOutput ? wrapResearchSchema(schema) : schema,
+			},
+		};
 	}
-	return body;
+	return { body, wrappedOutput };
 }
 
 interface ResearchOutputItem {
@@ -69,7 +84,11 @@ interface ResearchResponse {
 	incomplete_details?: { reason?: 'max_output_tokens' | 'content_filter' | null } | null;
 }
 
-export function formatResearchResponse(data: IDataObject, savedModel: string): IDataObject {
+export function formatResearchResponse(
+	data: IDataObject,
+	savedModel: string,
+	wrappedOutput: boolean,
+): IDataObject {
 	const response: ResearchResponse = data as ResearchResponse;
 	const reference = response.id ? ` (${response.id})` : '';
 	if (response.error?.message) {
@@ -98,6 +117,9 @@ export function formatResearchResponse(data: IDataObject, savedModel: string): I
 		.join('');
 	if (!content.trim()) throw new Error(`Parallel Research returned no answer text${reference}.`);
 
+	const answer = wrappedOutput ? unwrapResearchAnswer(content, reference) : content;
+	const basis = response.basis ?? [];
+	const valuePrefix = `${researchValueKey}.`;
 	// Saved workflow expressions consume the Chat-shaped item, even in JSON mode.
 	return {
 		id: response.id,
@@ -105,7 +127,16 @@ export function formatResearchResponse(data: IDataObject, savedModel: string): I
 		object: 'chat.completion',
 		created: response.created_at,
 		model: savedModel,
-		choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }],
-		basis: response.basis ?? [],
+		choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content: answer } }],
+		basis: wrappedOutput
+			? basis.map((entry) => {
+					const { field } = entry;
+					if (field === researchValueKey) return { ...entry, field: 'output' };
+					if (typeof field === 'string' && field.startsWith(valuePrefix)) {
+						return { ...entry, field: field.slice(valuePrefix.length) };
+					}
+					return entry;
+				})
+			: basis,
 	};
 }

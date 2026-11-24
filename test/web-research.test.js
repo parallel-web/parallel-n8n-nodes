@@ -174,6 +174,131 @@ test('a saved system prompt can carry the question when the input expression is 
 	assert.equal(result[0].json.choices[0].message.content, 'Fusion combines nuclei.');
 });
 
+function savedJsonOutput(schema) {
+	return {
+		chatInputPrompt: 'Find examples.',
+		chatResponseFormat: 'json',
+		chatJsonSchemaName: 'examples',
+		chatJsonSchema: JSON.stringify(schema),
+	};
+}
+
+test('a saved array schema still produces an array JSON string and usable basis paths', async () => {
+	const arraySchema = { type: 'array', items: { type: 'string' }, minItems: 2 };
+	const [result] = await executeWebChat([savedJsonOutput(arraySchema)], async (_, { body }) => {
+		assert.deepEqual(body.text.format.schema, {
+			type: 'object',
+			properties: { value: arraySchema },
+			required: ['value'],
+			additionalProperties: false,
+		});
+		return researchResponse('{"value":["first","second"]}', [
+			{ ...basis[0], field: 'value' },
+			{ ...basis[0], field: 'value.1' },
+		]);
+	});
+	const output = result[0].json;
+	assert.equal(output.choices[0].message.content, '["first","second"]');
+	assert.equal(JSON.parse(output.choices[0].message.content)[1], 'second');
+	assert.deepEqual(output.basis, [basis[0], { ...basis[0], field: '1' }]);
+});
+
+test('wrapped schemas keep nested pointer targets and preserve JSON tokens on return', async () => {
+	const arraySchema = {
+		type: 'array',
+		$defs: {
+			'number/id~': { type: 'integer', minimum: 1 },
+		},
+		items: {
+			type: 'object',
+			properties: {
+				values: { type: 'array', items: { $ref: '#/$defs/number~1id~0' } },
+				copy: { $ref: '#/items/properties/values' },
+				$ref: { type: 'string', default: '#/literal' },
+			},
+			required: ['values', 'copy'],
+		},
+	};
+	const answer = '[{"values":[9007199254740993],"copy":[2],"$ref":"} literal"}]';
+	const [result] = await executeWebChat([savedJsonOutput(arraySchema)], async (_, { body }) => {
+		const schema = body.text.format.schema;
+		assert.equal(schema.properties.value.type, 'array');
+		assert.deepEqual(schema.properties.value.items.properties, {
+			values: { type: 'array', items: { $ref: '#/$defs/saved0' } },
+			copy: { $ref: '#/$defs/saved1' },
+			$ref: { type: 'string', default: '#/literal' },
+		});
+		assert.deepEqual(schema.$defs, {
+			saved0: { type: 'integer', minimum: 1 },
+			saved1: { type: 'array', items: { $ref: '#/$defs/saved0' } },
+		});
+		return researchResponse(`{"value": ${answer} }`, [{ ...basis[0], field: 'value.0' }]);
+	});
+	assert.equal(result[0].json.choices[0].message.content, answer);
+	assert.deepEqual(result[0].json.basis, [{ ...basis[0], field: '0' }]);
+});
+
+test('wrapping keeps references to the document, named anchors, and nested schema resources distinct', async () => {
+	const plan = {
+		$id: 'https://example.com/plan',
+		type: 'array',
+		$defs: { key: { $anchor: 'outer', type: 'string', minLength: 2 } },
+		items: {
+			$id: 'item',
+			type: 'object',
+			$defs: { key: { type: 'string', minLength: 4 } },
+			properties: {
+				inner: { $ref: '#/$defs/key' },
+				outer: { $ref: 'https://example.com/plan#outer' },
+			},
+		},
+	};
+	await executeWebChat([savedJsonOutput(plan)], async (_, { body }) => {
+		const schema = body.text.format.schema;
+		const root = schema.properties.value;
+		assert.equal(root.$id, undefined);
+		assert.equal(root.items.$id, undefined);
+		assert.deepEqual(root.items.properties, {
+			inner: { $ref: '#/$defs/saved0' },
+			outer: { $ref: '#/$defs/saved1' },
+		});
+		assert.equal(schema.$defs.saved0.minLength, 4);
+		assert.equal(schema.$defs.saved1.minLength, 2);
+		return researchResponse('{"value":[{"inner":"long","outer":"ok"}]}');
+	});
+});
+
+test('valid Research object schemas and their value field are passed through', async () => {
+	const objectSchema = {
+		type: 'object',
+		properties: { value: { $ref: '#/$defs/item' } },
+		$defs: { item: { type: 'string' } },
+	};
+	const content = '{"value":"original object"}';
+	const objectBasis = [{ ...basis[0], field: 'value' }];
+	const [result] = await executeWebChat([savedJsonOutput(objectSchema)], async (_, { body }) => {
+		assert.deepEqual(body.text.format.schema, objectSchema);
+		return researchResponse(content, objectBasis);
+	});
+	assert.equal(result[0].json.choices[0].message.content, content);
+	assert.deepEqual(result[0].json.basis, objectBasis);
+});
+
+test('a top-level JSON union is unwrapped and invalid envelopes fail explicitly', async () => {
+	const union = { anyOf: [{ type: 'string' }, { type: 'null' }] };
+	const [result] = await executeWebChat([savedJsonOutput(union)], async (_, { body }) => {
+		assert.deepEqual(body.text.format.schema.properties.value, union);
+		return researchResponse('{"value":null}');
+	});
+	assert.equal(result[0].json.choices[0].message.content, 'null');
+	for (const text of ['[]', '{"other":true}', '{"value":true,"value":false}', '{']) {
+		await assert.rejects(
+			executeWebChat([savedJsonOutput(union)], async () => researchResponse(text)),
+			/Research returned an invalid structured answer.*research_example/,
+		);
+	}
+});
+
 test('invalid saved inputs report useful errors before sending a request', async () => {
 	const noRequest = async () => assert.fail('Unexpected HTTP request');
 	for (const [saved, message] of [
