@@ -22,7 +22,7 @@ The regular node supports:
 
 - **Task:** synchronous and asynchronous Task Runs, Task Run status, and completed Task Run result retrieval.
 - **Search:** GA `/v1/search` with Turbo, Fast, Basic, and Advanced modes, required query handling, result budgets, and domain policy.
-- **Chat:** OpenAI-compatible chat completions using Speed, Lite, Base, or Core.
+- **Web Research:** answer a question synchronously with the Research API, as text or JSON matching a schema. This action replaces Web Chat in saved workflows.
 - **Monitor:** event-stream and snapshot creation, retrieval, listing, update, cancellation, immediate triggering, and cursor-paginated events.
 
 Current Task processors include Lite, Base, Core, Core 2x, Pro, Ultra, Ultra 2x, Ultra 4x, Ultra 8x, and their documented fast variants.
@@ -79,7 +79,6 @@ Releases are published only by the tag-triggered GitHub Actions workflow. Config
 - [Search API](https://docs.parallel.ai/search/search-quickstart)
 - [Task API](https://docs.parallel.ai/task-api/task-quickstart)
 - [Monitor API](https://docs.parallel.ai/monitor-api/monitor-quickstart)
-- [Chat API](https://docs.parallel.ai/chat-api/chat-quickstart)
 - [n8n community-node documentation](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Upgrading from 0.2.0
@@ -87,6 +86,17 @@ Releases are published only by the tag-triggered GitHub Actions workflow. Config
 Back up your n8n database and exported workflows before updating. Test the upgrade
 in a disposable instance first, using Node 22.22 or newer. Existing node,
 credential and operation identifiers remain unchanged.
+
+**Web Chat** appears as **Web Research** after upgrade. Saved prompts, API keys,
+response format, schemas and system prompts carry over. The action returns a
+string at `choices[0].message.content` in both modes. Existing `JSON.parse(...)`
+expressions still apply. Citations are available at `basis`. Research IDs replace
+Chat IDs, and Research currently returns null for basis reasoning and confidence.
+
+Saved Speed (including workflows with no saved model) and Lite use Low effort.
+Base uses Medium and Core uses High. The action waits for an interactive Research
+result. At current list prices, the default changes from $5 to $10 per 1,000
+successful requests. Check your Research API pricing and access before upgrading.
 
 - Search defaults to Basic, equivalent to the previous Base setting. Explicit
   Base and Pro values still map to Basic and Advanced.

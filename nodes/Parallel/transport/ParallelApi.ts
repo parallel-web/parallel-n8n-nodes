@@ -28,11 +28,12 @@ function requestOptions(
 	body?: IDataObject,
 	qs?: IDataObject,
 	timeout?: number,
+	headers?: Record<string, string>,
 ): IHttpRequestOptions {
 	const options: IHttpRequestOptions = {
 		method,
 		url: `${API_BASE_URL}${endpoint}`,
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json', ...headers },
 		json: true,
 	};
 	if (timeout !== undefined) options.timeout = timeout;
@@ -48,12 +49,13 @@ export async function parallelApiRequest(
 	body?: IDataObject,
 	qs?: IDataObject,
 	timeout?: number,
+	headers?: Record<string, string>,
 ): Promise<IDataObject> {
 	try {
 		const response: unknown = await context.helpers.httpRequestWithAuthentication.call(
 			context,
 			'parallelApi',
-			requestOptions(method, endpoint, body, qs, timeout),
+			requestOptions(method, endpoint, body, qs, timeout, headers),
 		);
 		return normalizeResponse(response);
 	} catch (error) {
