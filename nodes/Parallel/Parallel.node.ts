@@ -526,20 +526,20 @@ export class Parallel implements INodeType {
 					},
 				],
 			},
-			// WEB CHAT FIELDS
+			// WEB RESEARCH FIELDS
 			{
-				displayName: 'Model',
+				displayName: 'Research Effort',
 				name: 'chatModel',
 				type: 'options',
 				displayOptions: { show: { resource: ['task'], operation: ['webChat'] } },
 				options: [
-					{ name: 'Base', value: 'base' },
-					{ name: 'Core', value: 'core' },
-					{ name: 'Lite', value: 'lite' },
-					{ name: 'Speed', value: 'speed' },
+					{ name: 'High (Previously Core)', value: 'core' },
+					{ name: 'Low (Previously Lite)', value: 'lite' },
+					{ name: 'Low (Previously Speed)', value: 'speed' },
+					{ name: 'Medium (Previously Base)', value: 'base' },
 				],
 				default: 'speed',
-				description: 'Parallel Chat model to use',
+				description: 'How much research to perform for this answer',
 			},
 			{
 				displayName: 'Input Prompt',
